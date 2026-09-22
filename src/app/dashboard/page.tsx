@@ -10,13 +10,16 @@ interface Order {
   id: string;
   customer: string;
   email: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
   items: Array<{ title: string; quantity: number; price: number }>;
   total: number;
   status: 'pending' | 'payment_confirmed' | 'in_production' | 'completed';
   date: string;
 }
 
-const defaultOrders: Order[] = [
+const initialDemoOrders: Order[] = [
   {
     id: 'AIM-1025',
     customer: 'Juan Pérez',
@@ -38,7 +41,9 @@ const defaultOrders: Order[] = [
 ];
 
 export default function DashboardPage() {
-  const [orders, setOrders] = useState<Order[]>(defaultOrders);
+  const [allOrders, setAllOrders] = useState<Order[]>(initialDemoOrders);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>(initialDemoOrders);
 
   useEffect(() => {
     try {
@@ -46,7 +51,14 @@ export default function DashboardPage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.length > 0) {
-          setOrders(parsed);
+          const merged = [...parsed];
+          initialDemoOrders.forEach((demo) => {
+            if (!merged.some((m) => m.id === demo.id)) {
+              merged.push(demo);
+            }
+          });
+          setAllOrders(merged);
+          setFilteredOrders(merged);
         }
       }
     } catch (e) {
@@ -54,16 +66,32 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      setFilteredOrders(allOrders);
+      return;
+    }
+    const cleanQuery = searchQuery.trim().toLowerCase().replace('#', '');
+    const results = allOrders.filter(
+      (o) =>
+        o.id.toLowerCase().includes(cleanQuery) ||
+        o.email.toLowerCase().includes(cleanQuery) ||
+        o.customer.toLowerCase().includes(cleanQuery)
+    );
+    setFilteredOrders(results);
+  };
+
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
       case 'payment_confirmed':
-        return <span className={styles.statusBadgeConfirmed}>Pago Confirmado</span>;
+        return <span className={styles.statusBadgeConfirmed}>💳 Pago Confirmado</span>;
       case 'in_production':
-        return <span className={styles.statusBadgeProduction}>En Fabricación</span>;
+        return <span className={styles.statusBadgeProduction}>🖨️ En Fabricación</span>;
       case 'completed':
-        return <span className={styles.statusBadgeCompleted}>Completado</span>;
+        return <span className={styles.statusBadgeCompleted}>✅ Entregado / Listo</span>;
       default:
-        return <span className={styles.statusBadgePending}>Pendiente de Cotización</span>;
+        return <span className={styles.statusBadgePending}>⏳ Pendiente de Pago</span>;
     }
   };
 
@@ -73,27 +101,65 @@ export default function DashboardPage() {
 
       <main className={`container ${styles.dashboardContainer}`}>
         <div className={styles.dashboardHeader}>
-          <h1 className={styles.title}>Panel de Control & Pedidos</h1>
+          <h1 className={styles.title}>Rastreo de Pedidos & Mis Encargos</h1>
           <p className={styles.subtitle}>
-            Consulta el estado de fabricación en tiempo real y gestiona tus encargos.
+            Monitorea el progreso de fabricación en tiempo real y consulta los detalles de tus piezas.
           </p>
+        </div>
+
+        {/* CLIENT SEARCH / TRACKER BAR */}
+        <div style={{ background: '#ffffff', padding: '24px', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '1.4rem' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Ingresa tu número de encargo (ej. #AIM-1025) o correo electrónico..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '12px 18px',
+                borderRadius: '980px',
+                border: '1px solid #d2d2d7',
+                fontSize: '0.95rem',
+                outline: 'none',
+                minWidth: '240px',
+              }}
+            />
+            <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }}>
+              Buscar Pedido
+            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilteredOrders(allOrders);
+                }}
+                className="btn btn-outline-dark"
+                style={{ padding: '12px 18px' }}
+              >
+                Ver Todos
+              </button>
+            )}
+          </form>
         </div>
 
         <div className={styles.dashboardGrid}>
           {/* ORDERS LIST */}
           <div className={styles.card}>
             <div className={styles.cardTitle}>
-              <span>Tus Encargos Recientes ({orders.length})</span>
+              <span>Encargos ({filteredOrders.length})</span>
               <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
                 + Nuevo Encargo
               </Link>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orders.map((ord) => (
+              {filteredOrders.map((ord) => (
                 <div key={ord.id} className={styles.orderCard}>
                   <div className={styles.orderHeader}>
-                    <span className={styles.orderId}>Encargo #{ord.id}</span>
+                    <span className={styles.orderId}>Pedido #{ord.id}</span>
                     {getStatusBadge(ord.status)}
                   </div>
 
@@ -121,7 +187,7 @@ export default function DashboardPage() {
                           ord.status !== 'pending' ? styles.timelineDotActive : ''
                         }`}
                       ></span>
-                      <span>Pago Confirmado</span>
+                      <span>Pago Verificado</span>
                     </div>
                     <div className={styles.timelineStep}>
                       <span
@@ -131,7 +197,7 @@ export default function DashboardPage() {
                             : ''
                         }`}
                       ></span>
-                      <span>Imprimiendo</span>
+                      <span>Fabricando</span>
                     </div>
                     <div className={styles.timelineStep}>
                       <span
@@ -151,32 +217,47 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+
+              {filteredOrders.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#86868b' }}>
+                  No se encontraron pedidos con ese número o correo.
+                </div>
+              )}
             </div>
           </div>
 
-          {/* NOTIFICATIONS */}
+          {/* NOTIFICATIONS & WHATSAPP SUPPORT */}
           <div className={styles.card}>
-            <h3 className={styles.cardTitle}>Notificaciones & Estado</h3>
+            <h3 className={styles.cardTitle}>Atención y Soporte</h3>
 
             <div className={styles.notifList}>
               <div className={styles.notifItem}>
-                <span className={styles.notifTitle}>🟢 Taller en Operación</span>
+                <span className={styles.notifTitle}>💬 Asistencia Directa</span>
                 <p className={styles.notifDesc}>
-                  Todas las impresoras están calibradas. Los encargos enviados hoy se despachan en 24-48 horas.
+                  ¿Tienes dudas sobre las medidas o materiales de tu encargo?
+                </p>
+                <a
+                  href="https://wa.me/18494622228?text=Hola!%20Deseo%20consultar%20el%20estado%20de%20mi%20pedido%20en%20aImprimir3D."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{ marginTop: '8px', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  WhatsApp: 849-462-2228
+                </a>
+              </div>
+
+              <div className={styles.notifItem}>
+                <span className={styles.notifTitle}>💳 Confirmación de Transferencia</span>
+                <p className={styles.notifDesc}>
+                  Si realizaste una transferencia bancaria, envía tu comprobante para acelerar la puesta en marcha en la impresora.
                 </p>
               </div>
 
               <div className={styles.notifItem}>
-                <span className={styles.notifTitle}>💳 Confirmación de Pagos</span>
+                <span className={styles.notifTitle}>📦 Tiempos de Entrega</span>
                 <p className={styles.notifDesc}>
-                  Recuerda enviar tu comprobante de transferencia al WhatsApp oficial para iniciar producción inmediata.
-                </p>
-              </div>
-
-              <div className={styles.notifItem}>
-                <span className={styles.notifTitle}>✨ Bienvenida a aImprimir3D</span>
-                <p className={styles.notifDesc}>
-                  Gracias por confiar en nosotros para hacer realidad tus ideas capa por capa.
+                  Los pedidos confirmados se procesan y entregan en un plazo promedio de 24 a 48 horas laborales.
                 </p>
               </div>
             </div>

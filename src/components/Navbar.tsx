@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import styles from "./Navbar.module.css";
-
 import { useCart } from "@/context/CartContext";
 
 export default function Navbar() {
@@ -58,7 +57,7 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* DESKTOP NAVIGATION */}
+          {/* DESKTOP CLIENT NAVIGATION (NO ADMIN LINK HERE) */}
           <nav className={styles.desktopNav}>
             <Link href="/" className={styles.navItem}>
               Inicio
@@ -67,11 +66,11 @@ export default function Navbar() {
               Catálogo
             </Link>
             <Link href="/dashboard" className={styles.navItem}>
-              Mis Pedidos
+              Rastrear Pedido
             </Link>
-            <Link href="/admin" className={styles.navItem}>
-              Admin
-            </Link>
+            <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.navItem}>
+              Contacto
+            </a>
           </nav>
 
           {/* RIGHT ACTIONS */}
@@ -91,7 +90,6 @@ export default function Navbar() {
             <Link href="/catalogo" className="btn btn-primary" style={{ padding: '9px 20px', fontSize: '0.88rem' }}>
               <span>Iniciar Encargo</span>
             </Link>
-
 
             {/* MOBILE HAMBURGER BUTTON */}
             <button 
@@ -115,24 +113,24 @@ export default function Navbar() {
             <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
               📦 Catálogo de Productos
             </Link>
-            <Link href="/#cotizador" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-              ⚡ Cotizador Instantáneo
+            <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+              🔍 Rastrear mi Pedido
             </Link>
-            <Link href="/#servicios" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-              🛠️ Servicios de Fabricación
-            </Link>
-            <Link href="/#como-funciona" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-              💡 ¿Cómo Funciona?
-            </Link>
+            <a 
+              href="https://wa.me/18494622228" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={styles.mobileNavItem}
+            >
+              💬 Contacto WhatsApp
+            </a>
             <div className={styles.mobileMenuDivider}></div>
             <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
               👤 Mi Cuenta / Iniciar Sesión
             </Link>
-            <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-              ⚙️ Panel de Administración
-            </Link>
-            <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className="btn btn-cyan" style={{ marginTop: '10px' }}>
-              ⚡ Iniciar Encargo Ahora
+            <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className="btn btn-primary" style={{ marginTop: '10px' }}>
+              Iniciar Encargo Ahora
             </Link>
           </div>
         )}
@@ -140,4 +138,3 @@ export default function Navbar() {
     </>
   );
 }
-

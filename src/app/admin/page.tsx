@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './admin.module.css';
@@ -58,6 +59,10 @@ const defaultAdminOrders: Order[] = [
 ];
 
 export default function AdminPage() {
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
+  const [adminPassword, setAdminPassword] = useState<string>('');
+  const [adminError, setAdminError] = useState<string | null>(null);
+
   const [orders, setOrders] = useState<Order[]>(defaultAdminOrders);
   const [filterTab, setFilterTab] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
@@ -65,12 +70,17 @@ export default function AdminPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if admin is authenticated in session
+    const auth = sessionStorage.getItem('aimprimir3d_admin_auth');
+    if (auth === 'true') {
+      setIsAdminLoggedIn(true);
+    }
+
     try {
       const saved = localStorage.getItem('aimprimir3d_orders');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.length > 0) {
-          // Merge unique orders
           const merged = [...parsed];
           defaultAdminOrders.forEach((def) => {
             if (!merged.some((m) => m.id === def.id)) {
@@ -84,6 +94,23 @@ export default function AdminPage() {
       console.error(e);
     }
   }, []);
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Default admin password
+    if (adminPassword === 'admin123' || adminPassword === 'aimprimir3d') {
+      setIsAdminLoggedIn(true);
+      sessionStorage.setItem('aimprimir3d_admin_auth', 'true');
+      setAdminError(null);
+    } else {
+      setAdminError('Contraseña de administrador incorrecta.');
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false);
+    sessionStorage.removeItem('aimprimir3d_admin_auth');
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -117,16 +144,78 @@ export default function AdminPage() {
     return matchesFilter && matchesSearch;
   });
 
+  // 1. ADMIN AUTH GATE
+  if (!isAdminLoggedIn) {
+    return (
+      <>
+        <Navbar />
+        <main className={`container ${styles.adminContainer}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={`${styles.tableCard} animate-fade-in`} style={{ maxWidth: '420px', width: '100%', textAlign: 'center', padding: '40px 30px' }}>
+            <span style={{ fontSize: '3rem' }}>🔒</span>
+            <h2 style={{ fontSize: '1.6rem', color: '#1d1d1f', marginTop: '12px', fontWeight: 700 }}>
+              Acceso Administrativo
+            </h2>
+            <p style={{ color: '#86868b', fontSize: '0.9rem', marginTop: '6px', marginBottom: '24px' }}>
+              Área restringida exclusiva para el equipo de aImprimir3D.
+            </p>
+
+            <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <input
+                type="password"
+                placeholder="Ingresa la clave de administrador..."
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                required
+                className={styles.searchInput}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px' }}
+              />
+
+              {adminError && (
+                <p style={{ color: '#ef4444', fontSize: '0.85rem' }}>{adminError}</p>
+              )}
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
+              >
+                Ingresar al Panel
+              </button>
+            </form>
+
+            <div style={{ marginTop: '20px' }}>
+              <Link href="/" style={{ color: '#86868b', fontSize: '0.85rem' }}>
+                ← Volver a la Tienda
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // 2. AUTHENTICATED ADMIN PANEL
   return (
     <>
       <Navbar />
 
       <main className={`container ${styles.adminContainer}`}>
-        <div className={styles.adminHeader}>
-          <h1 className={styles.title}>Panel de Administración de Encargos</h1>
-          <p className={styles.subtitle}>
-            Gestiona pedidos, confirma pagos externos y actualiza el estado de producción en tiempo real.
-          </p>
+        <div className={styles.adminHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 className={styles.title}>Panel de Administración de Encargos</h1>
+            <p className={styles.subtitle}>
+              Gestiona pedidos, confirma pagos externos y actualiza el estado de producción en tiempo real.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAdminLogout}
+            className="btn btn-outline-dark"
+            style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+          >
+            🔒 Cerrar Sesión Admin
+          </button>
         </div>
 
         {/* CONTROLS BAR */}
