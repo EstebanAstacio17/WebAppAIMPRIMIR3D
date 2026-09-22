@@ -1,0 +1,233 @@
+/* Home */
+
+:root{
+    --primary:#17345d;
+    --secondary:#10284a;
+    --accent:#2e5ca7;
+    --light:#f8f9fa;
+    --dark:#212529;
+}
+
+*{
+    font-family:'Poppins',sans-serif;
+}
+
+body{
+    overflow-x:hidden;
+}
+
+/* TOP BAR */
+
+.top-bar{
+    background:var(--primary);
+    color:white;
+    padding:8px 0;
+    font-size:14px;
+}
+
+.top-bar a{
+    color:white;
+    text-decoration:none;
+}
+
+/* NAVBAR */
+
+.navbar{
+    background:white;
+    box-shadow:0 2px 15px rgba(0,0,0,.08);
+}
+
+.navbar-brand img{
+    height:70px;
+}
+
+.nav-link{
+    font-weight:500;
+    color:#333 !important;
+}
+
+.btn-cotizar{
+    background:var(--accent);
+    color:white;
+    border-radius:30px;
+    padding:10px 25px;
+}
+
+.btn-cotizar:hover{
+    background:var(--primary);
+    color:white;
+}
+
+/* HERO */
+
+.carousel-item{
+    height:85vh;
+    min-height:600px;
+}
+
+.carousel-item img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    filter:brightness(45%);
+}
+
+.hero-content{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    color:white;
+    width:80%;
+}
+
+.hero-content h1{
+    font-size:3.5rem;
+    font-weight:700;
+}
+
+.hero-content p{
+    font-size:1.2rem;
+}
+
+/* SECTION */
+
+.section-padding{
+    padding:100px 0;
+}
+
+.section-title{
+    font-weight:700;
+    color:var(--primary);
+    margin-bottom:20px;
+}
+
+.card-custom{
+    border:none;
+    border-radius:20px;
+    transition:.3s;
+    box-shadow:0 5px 25px rgba(0,0,0,.08);
+}
+
+.card-custom:hover{
+    transform:translateY(-10px);
+}
+
+.icon-box{
+    font-size:50px;
+    color:var(--accent);
+}
+
+.bg-primary-custom{
+    background:var(--primary);
+    color:white;
+}
+
+.cta{
+    background:linear-gradient(rgba(23,52,93,.95),rgba(23,52,93,.95)),
+    url('assets/img/slide2.jpg');
+    background-size:cover;
+    background-position:center;
+    color:white;
+    text-align:center;
+    padding:100px 0;
+}
+
+
+
+
+.footer{
+    background:#0b1422;
+    color:white;
+    padding:60px 0 20px;
+}
+
+
+
+.footer a{
+    color:#ccc;
+    text-decoration:none;
+}
+
+.footer a:hover{
+    color:white;
+}
+
+.gallery img{
+    border-radius:15px;
+    transition:.3s;
+}
+
+.gallery img:hover{
+    transform:scale(1.05);
+}
+
+@media(max-width:768px){
+
+.hero-content h1{
+font-size:2rem;
+}
+
+.carousel-item{
+height:70vh;
+}
+
+}
+
+/* PAra iluminar el logo del footer */
+
+.footer img{
+    filter:
+        drop-shadow(0 0 2px rgba(255,255,255,.9))
+        drop-shadow(0 0 8px rgba(255,255,255,.35));
+    transition:all .3s ease;
+}
+
+.footer img:hover{
+    filter:
+        drop-shadow(0 0 3px rgba(255,255,255,1))
+        drop-shadow(0 0 12px rgba(255,255,255,.5));
+}
+
+/* Para la animacion en la barra de arriba en los numeros y correos */
+
+.top-bar a{
+    transition:all .3s ease;
+}
+
+.top-bar a:hover{
+    color:#dbe8ff !important;
+}
+
+/*  los link de correos y llamada en footer */
+
+a[href^="tel"]{
+    transition:all .3s ease;
+}
+
+a[href^="tel"]:hover{
+    color:var(--accent) !important;
+}
+
+a[href^="mailto"],
+a[href*="instagram.com"]{
+    transition:all .3s ease;
+}
+
+a[href^="mailto"]:hover,
+a[href*="instagram.com"]:hover{
+    color:var(--accent) !important;
+}
+
+/*  Pag de Contacto */
+
+.form-control{
+    border-radius:12px;
+    padding:12px;
+}
+
+.form-control:focus{
+    box-shadow:none;
+    border-color:var(--accent);
+}
