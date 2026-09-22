@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import styles from "./Navbar.module.css";
 
+import { useCart } from "@/context/CartContext";
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { totalCount } = useCart();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,16 +28,16 @@ export default function Navbar() {
           <div className={styles.announcementLeft}>
             <span className="status-dot"></span>
             <span className={styles.announcementText}>
-              <strong>Granja 3D Operativa:</strong> Impresión FDM & Resina 8K de alta precisión • Envíos a todo el país
+              <strong>Granja 3D Operativa:</strong> Impresión FDM & Resina 8K • Envíos a todo el país
             </span>
           </div>
           <div className={styles.announcementRight}>
             <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.topContact}>
-              <span>💬 WhatsApp:</span> <strong>849-462-2228</strong>
+              <span>WhatsApp:</span> <strong>849-462-2228</strong>
             </a>
             <span className={styles.divider}>|</span>
             <a href="mailto:info.aimprimir3d@gmail.com" className={styles.topContact}>
-              <span>✉️</span> info.aimprimir3d@gmail.com
+              info.aimprimir3d@gmail.com
             </a>
           </div>
         </div>
@@ -48,8 +51,8 @@ export default function Navbar() {
             <Image
               src="/img/logonombre.png"
               alt="aImprimir3D - Taller de Fabricación Digital"
-              width={190}
-              height={45}
+              width={180}
+              height={42}
               className={styles.logoImg}
               priority
             />
@@ -62,16 +65,12 @@ export default function Navbar() {
             </Link>
             <Link href="/catalogo" className={styles.navItem}>
               Catálogo
-              <span className={styles.newBadge}>Nuevo</span>
             </Link>
-            <Link href="/#cotizador" className={styles.navItem}>
-              Cotizador
+            <Link href="/dashboard" className={styles.navItem}>
+              Mis Pedidos
             </Link>
-            <Link href="/#servicios" className={styles.navItem}>
-              Servicios
-            </Link>
-            <Link href="/#como-funciona" className={styles.navItem}>
-              ¿Cómo funciona?
+            <Link href="/admin" className={styles.navItem}>
+              Admin
             </Link>
           </nav>
 
@@ -79,7 +78,9 @@ export default function Navbar() {
           <div className={styles.navActions}>
             <Link href="/cart" className={styles.cartBtn} title="Ver Carrito">
               <span className={styles.cartIcon}>🛒</span>
-              <span className={styles.cartBadge}>0</span>
+              {totalCount > 0 && (
+                <span className={styles.cartBadge}>{totalCount}</span>
+              )}
             </Link>
 
             <Link href="/auth/login" className={styles.accountBtn}>
@@ -87,9 +88,10 @@ export default function Navbar() {
               <span>Mi Cuenta</span>
             </Link>
 
-            <Link href="/catalogo" className="btn btn-cyan">
-              <span>⚡ Iniciar Encargo</span>
+            <Link href="/catalogo" className="btn btn-primary" style={{ padding: '9px 20px', fontSize: '0.88rem' }}>
+              <span>Iniciar Encargo</span>
             </Link>
+
 
             {/* MOBILE HAMBURGER BUTTON */}
             <button 

@@ -1,10 +1,42 @@
+'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./page.module.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useCart } from "@/context/CartContext";
 
 export default function Home() {
+  const { addToCart } = useCart();
+
+  const featuredProducts = [
+    {
+      id: 1,
+      title: "Dragón Mítico & Mecha 8K",
+      desc: "Máximo nivel de detalle en resina gris espacial.",
+      price: 1850,
+      image: "/img/resin_figures.jpg",
+      category: "Coleccionables",
+    },
+    {
+      id: 2,
+      title: "Soporte Gamer para Auriculares",
+      desc: "Diseño ergonómico y resistente en PLA+ reforzado.",
+      price: 950,
+      image: "/img/slide1.png",
+      category: "Accesorios",
+    },
+    {
+      id: 3,
+      title: "Lámpara Litofanía con Foto",
+      desc: "Tu imagen cobra vida en relieve 3D al encender la luz.",
+      price: 1450,
+      image: "/img/slide2.png",
+      category: "Hogar",
+    },
+  ];
+
   return (
     <>
       <Navbar />
@@ -112,71 +144,41 @@ export default function Home() {
           </div>
 
           <div className={styles.productsGrid}>
-            {/* PRODUCTO 1 */}
-            <div className={styles.productCard}>
-              <div className={styles.productImgBox}>
-                <Image
-                  src="/img/resin_figures.jpg"
-                  alt="Dragón Mítico Resina 8K"
-                  fill
-                  className={styles.productImg}
-                />
-              </div>
-              <div className={styles.productBody}>
-                <h4 className={styles.productTitle}>Dragón Mítico & Mecha 8K</h4>
-                <p className={styles.productDesc}>Máximo nivel de detalle en resina gris espacial.</p>
-                <div className={styles.productFooter}>
-                  <span className={styles.productPrice}>RD$1,850</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
-                    Encargar
-                  </Link>
+            {featuredProducts.map((p) => (
+              <div key={p.id} className={styles.productCard}>
+                <div className={styles.productImgBox}>
+                  <Image
+                    src={p.image}
+                    alt={p.title}
+                    fill
+                    className={styles.productImg}
+                  />
+                </div>
+                <div className={styles.productBody}>
+                  <h4 className={styles.productTitle}>{p.title}</h4>
+                  <p className={styles.productDesc}>{p.desc}</p>
+                  <div className={styles.productFooter}>
+                    <span className={styles.productPrice}>RD${p.price.toLocaleString()}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addToCart({
+                          id: p.id,
+                          title: p.title,
+                          price: p.price,
+                          image: p.image,
+                          category: p.category,
+                        })
+                      }
+                      className="btn btn-primary"
+                      style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+                    >
+                      + Encargar
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* PRODUCTO 2 */}
-            <div className={styles.productCard}>
-              <div className={styles.productImgBox}>
-                <Image
-                  src="/img/slide1.png"
-                  alt="Soporte Gamer"
-                  fill
-                  className={styles.productImg}
-                />
-              </div>
-              <div className={styles.productBody}>
-                <h4 className={styles.productTitle}>Soporte Gamer para Auriculares</h4>
-                <p className={styles.productDesc}>Diseño ergonómico y resistente en PLA+ reforzado.</p>
-                <div className={styles.productFooter}>
-                  <span className={styles.productPrice}>RD$950</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
-                    Encargar
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* PRODUCTO 3 */}
-            <div className={styles.productCard}>
-              <div className={styles.productImgBox}>
-                <Image
-                  src="/img/slide2.png"
-                  alt="Lámpara Litofanía"
-                  fill
-                  className={styles.productImg}
-                />
-              </div>
-              <div className={styles.productBody}>
-                <h4 className={styles.productTitle}>Lámpara Litofanía con Foto</h4>
-                <p className={styles.productDesc}>Tu imagen cobra vida en relieve 3D al encender la luz.</p>
-                <div className={styles.productFooter}>
-                  <span className={styles.productPrice}>RD$1,450</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
-                    Encargar
-                  </Link>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

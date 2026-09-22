@@ -31,6 +31,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { CartProvider } from "@/context/CartContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,8 +41,11 @@ export default function RootLayout({
   return (
     <html lang="es" className={poppins.variable}>
       <body>
-        <main>{children}</main>
+        <CartProvider>
+          <main>{children}</main>
+        </CartProvider>
       </body>
     </html>
   );
 }
+

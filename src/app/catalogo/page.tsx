@@ -70,9 +70,12 @@ const mockProducts = [
   },
 ];
 
+import { useCart } from "@/context/CartContext";
+
 export default function Catalogo() {
   const [selectedCat, setSelectedCat] = useState<string>("Todos");
   const [search, setSearch] = useState<string>("");
+  const { addToCart } = useCart();
 
   const categories = ["Todos", "Coleccionables", "Accesorios", "Hogar", "Industrial"];
 
@@ -141,16 +144,26 @@ export default function Catalogo() {
                   <span>⏱️ Entrega: {product.tiempo}</span>
                   <span className={styles.productPrice}>RD${product.price.toLocaleString()}</span>
                 </div>
-                <Link
-                  href={`/cart?add=${product.id}&title=${encodeURIComponent(product.title)}&price=${product.price}`}
+                <button
+                  type="button"
+                  onClick={() =>
+                    addToCart({
+                      id: product.id,
+                      title: product.title,
+                      price: product.price,
+                      image: product.image,
+                      category: product.categoria,
+                    })
+                  }
                   className={`btn btn-primary ${styles.addToCart}`}
                 >
-                  🛒 Añadir al Encargo
-                </Link>
+                  + Añadir al Encargo
+                </button>
               </div>
             </div>
           ))}
         </div>
+
 
         {filteredProducts.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#64748b" }}>
