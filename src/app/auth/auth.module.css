@@ -1,0 +1,82 @@
+.authContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(23, 52, 93, 0.9), rgba(16, 40, 74, 0.9)), url('/img/slide2.png') no-repeat center center/cover;
+  padding: 20px;
+}
+
+.authCard {
+  width: 100%;
+  max-width: 450px;
+  padding: 40px;
+  text-align: center;
+}
+
+.authTitle {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: var(--primary);
+}
+
+.authSubtitle {
+  color: var(--dark);
+  margin-bottom: 30px;
+  opacity: 0.8;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--dark);
+}
+
+.input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.7);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(46, 92, 167, 0.1);
+}
+
+.submitBtn {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.authLinks {
+  margin-top: 25px;
+  font-size: 0.9rem;
+}
+
+.authLink {
+  color: var(--accent);
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.authLink:hover {
+  text-decoration: underline;
+}
+
+.logo {
+  height: 60px;
+  width: auto;
+  margin-bottom: 20px;
+}
