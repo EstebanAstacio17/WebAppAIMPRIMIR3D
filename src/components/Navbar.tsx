@@ -78,9 +78,12 @@ export default function Navbar() {
             <Link href="/catalogo" className={styles.navItem}>
               Catálogo
             </Link>
-            <Link href="/dashboard" className={styles.navItem}>
-              Rastrear Pedido
-            </Link>
+            {/* ONLY VISIBLE WHEN CLIENT IS LOGGED IN */}
+            {userName && (
+              <Link href="/dashboard" className={styles.navItem}>
+                Mis Pedidos
+              </Link>
+            )}
             <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.navItem}>
               Contacto
             </a>
@@ -103,7 +106,7 @@ export default function Navbar() {
             ) : (
               <Link href="/auth/login" className={styles.accountBtn}>
                 <span className={styles.userIcon}>👤</span>
-                <span>Mi Cuenta</span>
+                <span>Iniciar Sesión</span>
               </Link>
             )}
 
@@ -133,9 +136,12 @@ export default function Navbar() {
             <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
               📦 Catálogo de Productos
             </Link>
-            <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-              🔍 Rastrear mi Pedido
-            </Link>
+            {/* ONLY VISIBLE WHEN CLIENT IS LOGGED IN */}
+            {userName && (
+              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+                🔍 Mis Pedidos
+              </Link>
+            )}
             <a 
               href="https://wa.me/18494622228" 
               target="_blank" 
