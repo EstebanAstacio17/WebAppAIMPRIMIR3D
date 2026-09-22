@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
   const { totalCount } = useCart();
 
   useEffect(() => {
@@ -16,6 +17,18 @@ export default function Navbar() {
       setScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
+
+    // Check user session
+    try {
+      const userStr = localStorage.getItem("aimprimir3d_user");
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        setUserName(u.name || "Cliente");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -57,7 +70,7 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* DESKTOP CLIENT NAVIGATION (NO ADMIN LINK HERE) */}
+          {/* DESKTOP CLIENT NAVIGATION */}
           <nav className={styles.desktopNav}>
             <Link href="/" className={styles.navItem}>
               Inicio
@@ -82,10 +95,17 @@ export default function Navbar() {
               )}
             </Link>
 
-            <Link href="/auth/login" className={styles.accountBtn}>
-              <span className={styles.userIcon}>👤</span>
-              <span>Mi Cuenta</span>
-            </Link>
+            {userName ? (
+              <Link href="/dashboard" className={styles.accountBtn}>
+                <span className={styles.userIcon}>👤</span>
+                <span>Hola, {userName}</span>
+              </Link>
+            ) : (
+              <Link href="/auth/login" className={styles.accountBtn}>
+                <span className={styles.userIcon}>👤</span>
+                <span>Mi Cuenta</span>
+              </Link>
+            )}
 
             <Link href="/catalogo" className="btn btn-primary" style={{ padding: '9px 20px', fontSize: '0.88rem' }}>
               <span>Iniciar Encargo</span>
@@ -126,9 +146,15 @@ export default function Navbar() {
               💬 Contacto WhatsApp
             </a>
             <div className={styles.mobileMenuDivider}></div>
-            <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-              👤 Mi Cuenta / Iniciar Sesión
-            </Link>
+            {userName ? (
+              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+                👤 Panel de {userName}
+              </Link>
+            ) : (
+              <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+                👤 Iniciar Sesión / Registrarse
+              </Link>
+            )}
             <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className="btn btn-primary" style={{ marginTop: '10px' }}>
               Iniciar Encargo Ahora
             </Link>

@@ -16,10 +16,23 @@ export default function RegisterPage() {
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const userObj = {
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      loggedInAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem('aimprimir3d_user', JSON.stringify(userObj));
+    } catch (err) {
+      console.error(err);
+    }
+
     setTimeout(() => {
       setLoading(false);
       router.push('/dashboard');
-    }, 600);
+    }, 500);
   };
 
   return (
@@ -29,7 +42,7 @@ export default function RegisterPage() {
           <Image src="/img/logonombre.png" alt="Logo" width={180} height={44} className={styles.logo} priority />
         </Link>
         <h1 className={styles.authTitle}>Crear Cuenta</h1>
-        <p className={styles.authSubtitle}>Únete para cotizar y dar seguimiento a tus pedidos</p>
+        <p className={styles.authSubtitle}>Únete para cotizar y dar seguimiento en vivo a tus pedidos</p>
 
         <form onSubmit={handleRegister}>
           <div className={styles.formGroup}>
@@ -74,7 +87,7 @@ export default function RegisterPage() {
             disabled={loading}
             className={`btn btn-primary ${styles.submitBtn}`}
           >
-            {loading ? 'Creando cuenta...' : 'Registrarme Gratis'}
+            {loading ? 'Creando cuenta...' : 'Registrarme y Rastrear Pedidos'}
           </button>
         </form>
 

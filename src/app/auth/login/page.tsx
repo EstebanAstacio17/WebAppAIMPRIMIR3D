@@ -15,10 +15,23 @@ export default function LoginPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const userObj = {
+      name: email.split('@')[0],
+      email: email.toLowerCase().trim(),
+      loggedInAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem('aimprimir3d_user', JSON.stringify(userObj));
+    } catch (err) {
+      console.error(err);
+    }
+
     setTimeout(() => {
       setLoading(false);
       router.push('/dashboard');
-    }, 600);
+    }, 500);
   };
 
   return (
@@ -28,7 +41,7 @@ export default function LoginPage() {
           <Image src="/img/logonombre.png" alt="Logo" width={180} height={44} className={styles.logo} priority />
         </Link>
         <h1 className={styles.authTitle}>Iniciar Sesión</h1>
-        <p className={styles.authSubtitle}>Accede a tu cuenta para gestionar tus encargos</p>
+        <p className={styles.authSubtitle}>Accede a tu cuenta para rastrear tus pedidos</p>
 
         <form onSubmit={handleLogin}>
           <div className={styles.formGroup}>
@@ -61,7 +74,7 @@ export default function LoginPage() {
             disabled={loading}
             className={`btn btn-primary ${styles.submitBtn}`}
           >
-            {loading ? 'Iniciando sesión...' : 'Ingresar a mi Cuenta'}
+            {loading ? 'Iniciando sesión...' : 'Ingresar y Ver Mis Pedidos'}
           </button>
         </form>
 

@@ -19,6 +19,11 @@ interface Order {
   date: string;
 }
 
+interface UserSession {
+  name: string;
+  email: string;
+}
+
 const initialDemoOrders: Order[] = [
   {
     id: 'AIM-1025',
@@ -41,11 +46,28 @@ const initialDemoOrders: Order[] = [
 ];
 
 export default function DashboardPage() {
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const [allOrders, setAllOrders] = useState<Order[]>(initialDemoOrders);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredOrders, setFilteredOrders] = useState<Order[]>(initialDemoOrders);
 
   useEffect(() => {
+    // 1. Check client session
+    try {
+      const userStr = localStorage.getItem('aimprimir3d_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setCurrentUser(user);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+
+    // 2. Load orders
     try {
       const saved = localStorage.getItem('aimprimir3d_orders');
       if (saved) {
@@ -65,6 +87,15 @@ export default function DashboardPage() {
       console.error(e);
     }
   }, []);
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('aimprimir3d_user');
+      setCurrentUser(null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,39 +126,90 @@ export default function DashboardPage() {
     }
   };
 
+  if (loading) {
+    return null;
+  }
+
+  // 1. CLIENT AUTH GATE (IF NOT LOGGED IN)
+  if (!currentUser) {
+    return (
+      <>
+        <Navbar />
+        <main className={`container ${styles.dashboardContainer}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={`${styles.card} animate-fade-in`} style={{ maxWidth: '460px', width: '100%', textAlign: 'center', padding: '48px 32px' }}>
+            <span style={{ fontSize: '3.5rem' }}>🔐</span>
+            <h2 style={{ fontSize: '1.7rem', color: '#1d1d1f', marginTop: '12px', fontWeight: 700, letterSpacing: '-0.02em' }}>
+              Rastreo de Pedidos
+            </h2>
+            <p style={{ color: '#86868b', fontSize: '0.95rem', marginTop: '8px', marginBottom: '28px', lineHeight: 1.5 }}>
+              Para ver el estado de fabricación en tiempo real y el historial de tus pedidos, por favor inicia sesión o crea una cuenta.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <Link href="/auth/login" className="btn btn-primary" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }}>
+                Iniciar Sesión
+              </Link>
+              <Link href="/auth/register" className="btn btn-outline-dark" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }}>
+                Crear Cuenta Gratis
+              </Link>
+            </div>
+
+            <div style={{ marginTop: '24px' }}>
+              <Link href="/" style={{ color: '#86868b', fontSize: '0.85rem' }}>
+                ← Volver al Inicio
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // 2. LOGGED IN CLIENT DASHBOARD
   return (
     <>
       <Navbar />
 
       <main className={`container ${styles.dashboardContainer}`}>
-        <div className={styles.dashboardHeader}>
-          <h1 className={styles.title}>Rastreo de Pedidos & Mis Encargos</h1>
-          <p className={styles.subtitle}>
-            Monitorea el progreso de fabricación en tiempo real y consulta los detalles de tus piezas.
-          </p>
+        <div className={styles.dashboardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 className={styles.title}>Mis Encargos & Rastreo</h1>
+            <p className={styles.subtitle}>
+              Bienvenido, <strong>{currentUser.name}</strong> ({currentUser.email}). Aquí puedes ver el estado de tus piezas.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="btn btn-outline-dark"
+            style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+          >
+            Cerrar Sesión
+          </button>
         </div>
 
         {/* CLIENT SEARCH / TRACKER BAR */}
-        <div style={{ background: '#ffffff', padding: '24px', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+        <div style={{ background: '#ffffff', padding: '20px 24px', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
           <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.4rem' }}>🔍</span>
+            <span style={{ fontSize: '1.3rem' }}>🔍</span>
             <input
               type="text"
-              placeholder="Ingresa tu número de encargo (ej. #AIM-1025) o correo electrónico..."
+              placeholder="Buscar por ID de encargo (ej. #AIM-1025)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 flex: 1,
-                padding: '12px 18px',
+                padding: '11px 18px',
                 borderRadius: '980px',
                 border: '1px solid #d2d2d7',
-                fontSize: '0.95rem',
+                fontSize: '0.92rem',
                 outline: 'none',
-                minWidth: '240px',
+                minWidth: '220px',
               }}
             />
-            <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }}>
-              Buscar Pedido
+            <button type="submit" className="btn btn-primary" style={{ padding: '11px 22px', fontSize: '0.9rem' }}>
+              Buscar
             </button>
             {searchQuery && (
               <button
@@ -137,7 +219,7 @@ export default function DashboardPage() {
                   setFilteredOrders(allOrders);
                 }}
                 className="btn btn-outline-dark"
-                style={{ padding: '12px 18px' }}
+                style={{ padding: '11px 16px', fontSize: '0.9rem' }}
               >
                 Ver Todos
               </button>
@@ -149,7 +231,7 @@ export default function DashboardPage() {
           {/* ORDERS LIST */}
           <div className={styles.card}>
             <div className={styles.cardTitle}>
-              <span>Encargos ({filteredOrders.length})</span>
+              <span>Tus Pedidos ({filteredOrders.length})</span>
               <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
                 + Nuevo Encargo
               </Link>
@@ -220,24 +302,24 @@ export default function DashboardPage() {
 
               {filteredOrders.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: '#86868b' }}>
-                  No se encontraron pedidos con ese número o correo.
+                  No tienes pedidos registrados con ese criterio.
                 </div>
               )}
             </div>
           </div>
 
-          {/* NOTIFICATIONS & WHATSAPP SUPPORT */}
+          {/* SUPPORT & WHATSAPP */}
           <div className={styles.card}>
-            <h3 className={styles.cardTitle}>Atención y Soporte</h3>
+            <h3 className={styles.cardTitle}>Asistencia & Soporte</h3>
 
             <div className={styles.notifList}>
               <div className={styles.notifItem}>
-                <span className={styles.notifTitle}>💬 Asistencia Directa</span>
+                <span className={styles.notifTitle}>💬 Soporte Técnico Directo</span>
                 <p className={styles.notifDesc}>
-                  ¿Tienes dudas sobre las medidas o materiales de tu encargo?
+                  ¿Deseas modificar un diseño o consultar detalles sobre tu entrega?
                 </p>
                 <a
-                  href="https://wa.me/18494622228?text=Hola!%20Deseo%20consultar%20el%20estado%20de%20mi%20pedido%20en%20aImprimir3D."
+                  href="https://wa.me/18494622228?text=Hola!%20Soy%20cliente%20de%20aImprimir3D%20y%20tengo%20una%20consulta."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary"
@@ -248,16 +330,16 @@ export default function DashboardPage() {
               </div>
 
               <div className={styles.notifItem}>
-                <span className={styles.notifTitle}>💳 Confirmación de Transferencia</span>
+                <span className={styles.notifTitle}>💳 Confirmación de Pago</span>
                 <p className={styles.notifDesc}>
-                  Si realizaste una transferencia bancaria, envía tu comprobante para acelerar la puesta en marcha en la impresora.
+                  Si realizaste una transferencia bancaria, envía tu comprobante para iniciar la producción de inmediato.
                 </p>
               </div>
 
               <div className={styles.notifItem}>
                 <span className={styles.notifTitle}>📦 Tiempos de Entrega</span>
                 <p className={styles.notifDesc}>
-                  Los pedidos confirmados se procesan y entregan en un plazo promedio de 24 a 48 horas laborales.
+                  Tiempo promedio de 24 a 48 horas una vez confirmado el pago.
                 </p>
               </div>
             </div>
