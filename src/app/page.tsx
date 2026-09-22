@@ -10,42 +10,42 @@ export default function Home() {
     <>
       <Navbar />
 
-      {/* HERO SECTION */}
+      {/* HERO SECTION (APPLE PRO SPACE GRAY & NAVY BLUE) */}
       <section className={styles.hero}>
-        <div className={styles.heroGlow1}></div>
-        <div className={styles.heroGlow2}></div>
+        <div className={styles.heroGlow}></div>
 
         <div className="container">
           <div className={styles.heroGrid}>
             {/* HERO LEFT */}
             <div className={`${styles.heroLeft} animate-fade-in`}>
               <div className={styles.badgePill}>
-                <span>✨ Taller de Fabricación Digital & 3D</span>
+                <span className="status-dot"></span>
+                <span>Taller de Fabricación Digital 3D</span>
               </div>
 
               <h1 className={styles.heroTitle}>
-                Tus ideas hechas realidad. <br />
-                <span className="text-gradient">Impresión 3D de alta precisión.</span>
+                Ideas que se imprimen. <br />
+                <span className="text-metallic">Soluciones que se crean.</span>
               </h1>
 
               <p className={styles.heroSubtext}>
-                Desde figuras de colección en resina 8K con máximo detalle hasta prototipos funcionales y piezas mecánicas bajo demanda. Cotiza al instante y recibe tu pedido con seguimiento en tiempo real.
+                Tecnología de manufactura aditiva de ultra precisión. Prototipos industriales, figuras coleccionables en resina 8K y piezas a medida con estándares profesionales.
               </p>
 
               <div className={styles.heroBtnGroup}>
-                <Link href="/catalogo" className="btn btn-cyan">
-                  <span>📦 Explorar Catálogo</span>
+                <Link href="/catalogo" className="btn btn-primary">
+                  <span>Explorar Catálogo</span>
                 </Link>
-                <Link href="#cotizador" className="btn btn-outline-white">
+                <Link href="#cotizador" className="btn btn-titanium">
                   <span>⚡ Cotizador Instantáneo</span>
                 </Link>
                 <a 
                   href="https://wa.me/18494622228" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="btn btn-outline-white"
+                  className="btn btn-outline-titanium"
                 >
-                  <span>💬 WhatsApp Directo</span>
+                  <span>WhatsApp Directo</span>
                 </a>
               </div>
 
@@ -53,7 +53,7 @@ export default function Home() {
               <div className={styles.heroTrustStats}>
                 <div className={styles.statItem}>
                   <span className={styles.statValue}>+2,500</span>
-                  <span className={styles.statLabel}>Piezas Entregadas</span>
+                  <span className={styles.statLabel}>Piezas Fabricadas</span>
                 </div>
                 <div className={styles.statItem}>
                   <span className={styles.statValue}>8K Ultra</span>
@@ -65,7 +65,7 @@ export default function Home() {
                 </div>
                 <div className={styles.statItem}>
                   <span className={styles.statValue}>100%</span>
-                  <span className={styles.statLabel}>Garantía de Calidad</span>
+                  <span className={styles.statLabel}>Garantía de Precisión</span>
                 </div>
               </div>
             </div>
@@ -78,7 +78,7 @@ export default function Home() {
                     <span className="status-dot"></span>
                     <span>12 Impresoras Activas</span>
                   </div>
-                  <span className={styles.modelBadge}>FDM & SLA 8K</span>
+                  <span className={styles.modelBadge}>FDM & Resina 8K</span>
                 </div>
 
                 <div className={styles.showcaseMedia}>
@@ -90,13 +90,13 @@ export default function Home() {
                     priority
                   />
                   <div className={styles.floatingTag}>
-                    <span>⚡ Fabricando ahora: Engranaje Helicoidal PETG</span>
+                    <span>Fabricación en curso: PETG Técnico</span>
                   </div>
                 </div>
 
                 <div className={styles.cardFooter}>
                   <div className={styles.specPill}>
-                    <span className={styles.specTitle}>Precisión</span>
+                    <span className={styles.specTitle}>Tolerancia</span>
                     <span className={styles.specVal}>±0.05 mm</span>
                   </div>
                   <div className={styles.specPill}>
@@ -104,7 +104,7 @@ export default function Home() {
                     <span className={styles.specVal}>PLA / PETG / Resina</span>
                   </div>
                   <div className={styles.specPill}>
-                    <span className={styles.specTitle}>Envío</span>
+                    <span className={styles.specTitle}>Cobertura</span>
                     <span className={styles.specVal}>Todo el País 🇩🇴</span>
                   </div>
                 </div>
@@ -117,14 +117,14 @@ export default function Home() {
       {/* INTERACTIVE QUOTE CALCULATOR */}
       <LiveQuoteCalculator />
 
-      {/* SERVICIOS ESPECIALIZADOS */}
-      <section id="servicios" className={styles.section} style={{ background: '#f8fafc' }}>
+      {/* SERVICIOS ESPECIALIZADOS (APPLE BENTO GRID) */}
+      <section id="servicios" className={styles.section} style={{ background: '#f5f5f7' }}>
         <div className="container">
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>🛠️ Nuestras Soluciones</span>
+            <span className={styles.sectionTag}>Capacidades Técnicas</span>
             <h2 className={styles.sectionTitle}>Servicios de Fabricación 3D</h2>
             <p className={styles.sectionSubtitle}>
-              Tecnología de última generación adaptada para hobbistas, empresas, diseñadores e ingenieros.
+              Soluciones diseñadas con la máxima precisión para ingenieros, creadores y empresas.
             </p>
           </div>
 
@@ -133,12 +133,12 @@ export default function Home() {
               <div className={styles.serviceIconWrapper}>🧪</div>
               <h3 className={styles.serviceTitle}>Figuras & Coleccionables 8K</h3>
               <p className={styles.serviceDesc}>
-                Impresión en resina fotosensible de ultra resolución sin líneas de capa visibles. Acabado sedoso ideal para modelismo, anime y dioramas.
+                Impresión en resina fotosensible de ultra resolución sin líneas de capa perceptibles. Acabado sedoso ideal para modelismo, anime y coleccionables.
               </p>
               <div className={styles.serviceTags}>
                 <span className={styles.serviceTagPill}>Resina 8K</span>
                 <span className={styles.serviceTagPill}>Ultra Detalle</span>
-                <span className={styles.serviceTagPill}>Listo para pintar</span>
+                <span className={styles.serviceTagPill}>Acabado Sedoso</span>
               </div>
             </div>
 
@@ -146,7 +146,7 @@ export default function Home() {
               <div className={styles.serviceIconWrapper}>⚙️</div>
               <h3 className={styles.serviceTitle}>Prototipado & Piezas Mecánicas</h3>
               <p className={styles.serviceDesc}>
-                Fabricación de repuestos, carcasas y ensambles funcionales con filamentos técnicos resistentes al impacto, fricción y temperatura (PETG, ABS, TPU).
+                Fabricación de repuestos, carcasas y ensambles funcionales en filamentos técnicos de alta resistencia mecánica y térmica (PETG, ABS, Nylon).
               </p>
               <div className={styles.serviceTags}>
                 <span className={styles.serviceTagPill}>FDM Industrial</span>
@@ -157,12 +157,12 @@ export default function Home() {
 
             <div className={styles.serviceCard}>
               <div className={styles.serviceIconWrapper}>📐</div>
-              <h3 className={styles.serviceTitle}>Diseño & Modelado 3D CAD</h3>
+              <h3 className={styles.serviceTitle}>Diseño & Modelado CAD</h3>
               <p className={styles.serviceDesc}>
-                ¿Tienes solo una idea o una pieza rota? Nuestro equipo modela tus conceptos en software 3D profesional listo para fabricación y ajuste milimétrico.
+                Convertimos planos, bocetos o piezas físicas desgastadas en modelos 3D paramétricos listos para producción y validación milimétrica.
               </p>
               <div className={styles.serviceTags}>
-                <span className={styles.serviceTagPill}>Modelado CAD</span>
+                <span className={styles.serviceTagPill}>Modelado Paramétrico</span>
                 <span className={styles.serviceTagPill}>Ingeniería Inversa</span>
                 <span className={styles.serviceTagPill}>Optimización STL</span>
               </div>
@@ -170,28 +170,28 @@ export default function Home() {
 
             <div className={styles.serviceCard}>
               <div className={styles.serviceIconWrapper}>🏭</div>
-              <h3 className={styles.serviceTitle}>Producción en Serie & Lotes</h3>
+              <h3 className={styles.serviceTitle}>Producción en Serie</h3>
               <p className={styles.serviceDesc}>
-                Capacidad de fabricar decenas o cientos de unidades para tu negocio, eventos corporativos, souvenirs o merchandising con descuentos por volumen.
+                Capacidad para fabricar desde decenas hasta cientos de unidades para proyectos comerciales, eventos corporativos o souvenirs con tarifas por volumen.
               </p>
               <div className={styles.serviceTags}>
-                <span className={styles.serviceTagPill}>Precios por Mayor</span>
-                <span className={styles.serviceTagPill}>Entregas Escalonadas</span>
+                <span className={styles.serviceTagPill}>Tarifas por Volumen</span>
                 <span className={styles.serviceTagPill}>Control de Calidad</span>
+                <span className={styles.serviceTagPill}>Entregas Rápidas</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CATÁLOGO DESTACADO / TOP TRENDS */}
-      <section className={styles.section} style={{ background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+      {/* CATÁLOGO DESTACADO */}
+      <section className={styles.section} style={{ background: '#ffffff', borderTop: '1px solid #e5e5ea' }}>
         <div className="container">
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>🔥 Tendencias & Favoritos</span>
-            <h2 className={styles.sectionTitle}>Modelos Listos para Encargar</h2>
+            <span className={styles.sectionTag}>Modelos Populares</span>
+            <h2 className={styles.sectionTitle}>Diseños Listos para Encargar</h2>
             <p className={styles.sectionSubtitle}>
-              Selecciona modelos populares prediseñados o explora cientos de opciones en nuestro catálogo completo.
+              Selecciona modelos destacados o solicita una pieza a medida desde nuestro cotizador.
             </p>
           </div>
 
@@ -204,16 +204,15 @@ export default function Home() {
                   fill
                   className={styles.productImg}
                 />
-                <span className={styles.productBadge}>Resina 8K Ultra</span>
+                <span className={styles.productBadge}>Resina 8K</span>
               </div>
               <div className={styles.productBody}>
                 <span className={styles.productCategory}>Coleccionables</span>
                 <h4 className={styles.productTitle}>Dragón Mítico & Mecha Escultórico</h4>
-                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Detalle microscópico con base texturizada listo para exhibición.</p>
                 <div className={styles.productMeta}>
                   <span className={styles.productPrice}>RD$1,850</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-                    Ver Opciones
+                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+                    Ver Detalles
                   </Link>
                 </div>
               </div>
@@ -223,20 +222,19 @@ export default function Home() {
               <div className={styles.productImgBox}>
                 <Image
                   src="/img/slide1.png"
-                  alt="Soporte Articulado Gamer"
+                  alt="Soporte Gamer"
                   fill
                   className={styles.productImg}
                 />
-                <span className={styles.productBadge}>Top Ventas</span>
+                <span className={styles.productBadge}>Popular</span>
               </div>
               <div className={styles.productBody}>
-                <span className={styles.productCategory}>Accesorios & Setup</span>
-                <h4 className={styles.productTitle}>Soporte Articulado para Auriculares & Mando</h4>
-                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Impreso en PLA+ reforzado con organizador de cables integrado.</p>
+                <span className={styles.productCategory}>Accesorios</span>
+                <h4 className={styles.productTitle}>Soporte Ergonómico Headset & Control</h4>
                 <div className={styles.productMeta}>
                   <span className={styles.productPrice}>RD$950</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-                    Ver Opciones
+                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+                    Ver Detalles
                   </Link>
                 </div>
               </div>
@@ -246,20 +244,19 @@ export default function Home() {
               <div className={styles.productImgBox}>
                 <Image
                   src="/img/slide2.png"
-                  alt="Litofanía Personalizada con Luz"
+                  alt="Lámpara Litofanía"
                   fill
                   className={styles.productImg}
                 />
                 <span className={styles.productBadge}>Personalizable</span>
               </div>
               <div className={styles.productBody}>
-                <span className={styles.productCategory}>Regalos & Recuerdos</span>
-                <h4 className={styles.productTitle}>Lámpara Litofanía con tu Foto Favorita</h4>
-                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Tu fotografía cobra vida en relieve al encender la luz LED cálida.</p>
+                <span className={styles.productCategory}>Hogar</span>
+                <h4 className={styles.productTitle}>Lámpara Litofanía 3D Personalizada</h4>
                 <div className={styles.productMeta}>
                   <span className={styles.productPrice}>RD$1,450</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-                    Ver Opciones
+                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+                    Ver Detalles
                   </Link>
                 </div>
               </div>
@@ -269,51 +266,50 @@ export default function Home() {
               <div className={styles.productImgBox}>
                 <Image
                   src="/img/slide3.png"
-                  alt="Engranaje y Pieza Mecánica PETG"
+                  alt="Repuesto Engranaje"
                   fill
                   className={styles.productImg}
                 />
                 <span className={styles.productBadge}>Ingeniería</span>
               </div>
               <div className={styles.productBody}>
-                <span className={styles.productCategory}>Repuestos & Taller</span>
-                <h4 className={styles.productTitle}>Repuesto de Engranaje Técnico Alta Densidad</h4>
-                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Fabricado a medida con tolerancia exacta para maquinaria o electrodomésticos.</p>
+                <span className={styles.productCategory}>Industrial</span>
+                <h4 className={styles.productTitle}>Repuesto de Engranaje Técnico PETG</h4>
                 <div className={styles.productMeta}>
                   <span className={styles.productPrice}>RD$650</span>
-                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-                    Ver Opciones
+                  <Link href="/catalogo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+                    Ver Detalles
                   </Link>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <Link href="/catalogo" className="btn btn-primary" style={{ padding: '14px 36px', fontSize: '1rem' }}>
-              🚀 Ver Todo el Catálogo de Productos
+          <div style={{ textAlign: 'center', marginTop: '45px' }}>
+            <Link href="/catalogo" className="btn btn-primary" style={{ padding: '14px 32px', fontSize: '0.95rem' }}>
+              Ver Catálogo Completo
             </Link>
           </div>
         </div>
       </section>
 
-      {/* CÓMO FUNCIONA (PASO A PASO) */}
-      <section id="como-funciona" className={styles.section} style={{ background: '#f8fafc' }}>
+      {/* CÓMO FUNCIONA (APPLE TIMELINE) */}
+      <section id="como-funciona" className={styles.section} style={{ background: '#f5f5f7' }}>
         <div className="container">
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>💡 Simple y Transparente</span>
-            <h2 className={styles.sectionTitle}>¿Cómo Funciona tu Pedido?</h2>
+            <span className={styles.sectionTag}>Experiencia Simple</span>
+            <h2 className={styles.sectionTitle}>¿Cómo Funciona tu Encargo?</h2>
             <p className={styles.sectionSubtitle}>
-              Hacer tu encargo es rápido, seguro y con acompañamiento técnico en cada paso.
+              Un proceso transparente y trazable desde el modelado hasta la entrega.
             </p>
           </div>
 
           <div className={styles.stepsGrid}>
             <div className={styles.stepCard}>
               <div className={styles.stepNumber}>1</div>
-              <h3 className={styles.stepTitle}>Elige o Envía tu Diseño</h3>
+              <h3 className={styles.stepTitle}>Selecciona o Envía tu Archivo</h3>
               <p className={styles.stepDesc}>
-                Selecciona productos de nuestro catálogo o envíanos tu archivo 3D (STL, OBJ, STEP) con las medidas deseadas.
+                Elige productos prediseñados o sube tu archivo 3D (STL, OBJ, STEP) con las medidas necesarias.
               </p>
             </div>
 
@@ -321,43 +317,43 @@ export default function Home() {
               <div className={styles.stepNumber}>2</div>
               <h3 className={styles.stepTitle}>Cotización & Asesoría</h3>
               <p className={styles.stepDesc}>
-                Revisamos la geometría de tu archivo gratis y te recomendamos el mejor material y resolución para tu presupuesto.
+                Validamos la viabilidad técnica de tu diseño y te asesoramos sobre el mejor material.
               </p>
             </div>
 
             <div className={styles.stepCard}>
               <div className={styles.stepNumber}>3</div>
-              <h3 className={styles.stepTitle}>Impresión de Precisión</h3>
+              <h3 className={styles.stepTitle}>Fabricación de Precisión</h3>
               <p className={styles.stepDesc}>
-                Fabricamos tu pieza en nuestras impresoras calibradas y realizamos el post-procesado (curado UV, lijado o limpieza).
+                Imprimimos con tecnología calibrada y aplicamos post-procesado y control de calidad.
               </p>
             </div>
 
             <div className={styles.stepCard}>
               <div className={styles.stepNumber}>4</div>
-              <h3 className={styles.stepTitle}>Entrega con Trazabilidad</h3>
+              <h3 className={styles.stepTitle}>Seguimiento y Entrega</h3>
               <p className={styles.stepDesc}>
-                Recibe notificaciones por correo y consulta el estatus de tu paquete en tu panel de cliente hasta llegar a tu puerta.
+                Monitorea el estado en tiempo real desde tu cuenta hasta recibir tu paquete.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FINAL CALL TO ACTION */}
+      {/* FINAL CALL TO ACTION (TITANIUM & NAVY BANNER) */}
       <section className={styles.section} style={{ background: '#ffffff' }}>
         <div className="container">
           <div className={styles.ctaBanner}>
-            <h2 className={styles.ctaTitle}>¿Listo para darle vida a tu próximo proyecto?</h2>
+            <h2 className={styles.ctaTitle}>¿Listo para iniciar tu próximo proyecto?</h2>
             <p className={styles.ctaSubtitle}>
-              Crea tu cuenta gratis hoy mismo para gestionar tus pedidos, recibir cotizaciones personalizadas y acumular puntos.
+              Crea tu cuenta gratis para solicitar cotizaciones, realizar encargos y dar seguimiento al estado de fabricación de tus piezas.
             </p>
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link href="/auth/register" className="btn btn-cyan" style={{ padding: '16px 36px', fontSize: '1.05rem' }}>
-                ✨ Registrarme y Empezar
+            <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link href="/auth/register" className="btn btn-primary" style={{ padding: '14px 32px', fontSize: '0.98rem' }}>
+                Crear Cuenta Gratis
               </Link>
-              <Link href="/catalogo" className="btn btn-outline-white" style={{ padding: '16px 36px', fontSize: '1.05rem' }}>
-                📦 Explorar Catálogo
+              <Link href="/catalogo" className="btn btn-outline-titanium" style={{ padding: '14px 32px', fontSize: '0.98rem' }}>
+                Ver Catálogo
               </Link>
             </div>
           </div>

@@ -27,10 +27,10 @@ export default function LiveQuoteCalculator() {
     <section id="cotizador" className={`${styles.section} ${styles.calcSection}`}>
       <div className="container">
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionTag}>⚡ Cotizador Instantáneo</span>
-          <h2 className={styles.sectionTitle}>Calcula el Costo de tu Pieza 3D</h2>
+          <span className={styles.sectionTag}>Configurador de Manufactura</span>
+          <h2 className={styles.sectionTitle}>Cotizador 3D en Tiempo Real</h2>
           <p className={styles.sectionSubtitle}>
-            Ajusta los parámetros técnicos para estimar el precio de fabricación en tiempo real.
+            Ajusta las especificaciones técnicas para estimar el costo de fabricación de tu pieza.
           </p>
         </div>
 
@@ -39,7 +39,7 @@ export default function LiveQuoteCalculator() {
           <div className={styles.calcControls}>
             {/* TECNOLOGÍA */}
             <div className={styles.calcGroup}>
-              <label className={styles.calcLabel}>1. Tecnología de Fabricación:</label>
+              <label className={styles.calcLabel}>Tecnología de Fabricación:</label>
               <div className={styles.chipGroup}>
                 <button
                   type="button"
@@ -49,7 +49,7 @@ export default function LiveQuoteCalculator() {
                     setMaterial('pla');
                   }}
                 >
-                  🧵 Filamento FDM (Prototipos & Repuestos)
+                  Filamento FDM (Técnico / Funcional)
                 </button>
                 <button
                   type="button"
@@ -60,14 +60,14 @@ export default function LiveQuoteCalculator() {
                     setLayerHeight('0.12');
                   }}
                 >
-                  🧪 Resina UV 8K (Figuras & Ultra Detalle)
+                  Resina 8K (Ultra Resolución)
                 </button>
               </div>
             </div>
 
             {/* MATERIAL */}
             <div className={styles.calcGroup}>
-              <label className={styles.calcLabel}>2. Material Seleccionado:</label>
+              <label className={styles.calcLabel}>Material Seleccionado:</label>
               <div className={styles.chipGroup}>
                 {tech === 'fdm' ? (
                   <>
@@ -76,7 +76,7 @@ export default function LiveQuoteCalculator() {
                       className={`${styles.calcChip} ${material === 'pla' ? styles.calcChipActive : ''}`}
                       onClick={() => setMaterial('pla')}
                     >
-                      PLA+ Estándar
+                      PLA+
                     </button>
                     <button
                       type="button"
@@ -90,7 +90,7 @@ export default function LiveQuoteCalculator() {
                       className={`${styles.calcChip} ${material === 'abs' ? styles.calcChipActive : ''}`}
                       onClick={() => setMaterial('abs')}
                     >
-                      ABS Industrial (Alto Impacto)
+                      ABS Industrial
                     </button>
                   </>
                 ) : (
@@ -98,7 +98,7 @@ export default function LiveQuoteCalculator() {
                     type="button"
                     className={`${styles.calcChip} ${styles.calcChipActive}`}
                   >
-                    Resina 8K Gris / Negra de Máxima Resolución
+                    Resina Fotosensible 8K Gris Espacial
                   </button>
                 )}
               </div>
@@ -107,8 +107,8 @@ export default function LiveQuoteCalculator() {
             {/* PESO ESTIMADO */}
             <div className={styles.calcGroup}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <label className={styles.calcLabel}>3. Peso Estimado de la Pieza:</label>
-                <span className={styles.rangeVal}>{weight} gramos</span>
+                <label className={styles.calcLabel}>Peso Estimado:</label>
+                <span className={styles.rangeVal}>{weight} g</span>
               </div>
               <div className={styles.rangeContainer}>
                 <input
@@ -127,7 +127,7 @@ export default function LiveQuoteCalculator() {
             {tech === 'fdm' && (
               <div className={styles.calcGroup}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <label className={styles.calcLabel}>4. Densidad de Relleno (Infill):</label>
+                  <label className={styles.calcLabel}>Densidad de Relleno (Infill):</label>
                   <span className={styles.rangeVal}>{infill}%</span>
                 </div>
                 <div className={styles.rangeContainer}>
@@ -146,21 +146,21 @@ export default function LiveQuoteCalculator() {
 
             {/* CALIDAD DE CAPA */}
             <div className={styles.calcGroup}>
-              <label className={styles.calcLabel}>5. Calidad de Acabado:</label>
+              <label className={styles.calcLabel}>Acabado y Altura de Capa:</label>
               <div className={styles.chipGroup}>
                 <button
                   type="button"
                   className={`${styles.calcChip} ${layerHeight === '0.20' ? styles.calcChipActive : ''}`}
                   onClick={() => setLayerHeight('0.20')}
                 >
-                  ⚡ Estándar (0.20 mm - Rápido y económico)
+                  Estándar (0.20 mm)
                 </button>
                 <button
                   type="button"
                   className={`${styles.calcChip} ${layerHeight === '0.12' ? styles.calcChipActive : ''}`}
                   onClick={() => setLayerHeight('0.12')}
                 >
-                  💎 Ultra Precisión (0.12 mm / Resina)
+                  Ultra Precisión (0.12 mm)
                 </button>
               </div>
             </div>
@@ -168,33 +168,33 @@ export default function LiveQuoteCalculator() {
 
           {/* RESULT BOX */}
           <div className={styles.calcResultBox}>
-            <span className={styles.resultTag}>Cotización Estimada</span>
+            <span className={styles.resultTag}>Presupuesto Estimado</span>
             <div className={styles.resultPrice}>
               RD${estimatedPrice.toLocaleString()}
             </div>
             
             <div className={styles.resultDetails}>
-              <span>⏱️ Tiempo estimado: ~{estimatedHours} - {estimatedHours + 4} horas de impresión</span>
-              <span>📦 Despacho disponible en: 24 a 48 horas</span>
-              <span>🔍 Revisión de archivo STL sin costo</span>
+              <span>Tiempo de fabricación: ~{estimatedHours} - {estimatedHours + 4} horas</span>
+              <span>Entrega estimada: 24 a 48 horas</span>
+              <span>Inspección de malla 3D incluida</span>
             </div>
 
             <Link
               href={`/catalogo?custom=true&tech=${tech}&mat=${material}&price=${estimatedPrice}`}
-              className="btn btn-cyan"
-              style={{ width: '100%', fontSize: '1rem', padding: '14px' }}
+              className="btn btn-primary"
+              style={{ width: '100%', fontSize: '0.95rem', padding: '13px' }}
             >
-              🚀 Encargar esta Pieza Ahora
+              Iniciar Encargo
             </Link>
 
             <a
               href={`https://wa.me/18494622228?text=Hola!%20Quiero%20cotizar%20una%20impresion%203D%20con%20${material.toUpperCase()}%20de%20aprox%20${weight}g.`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline-white"
-              style={{ width: '100%', fontSize: '0.9rem' }}
+              className="btn btn-outline-titanium"
+              style={{ width: '100%', fontSize: '0.88rem' }}
             >
-              💬 Enviar STL por WhatsApp
+              Consultar por WhatsApp
             </a>
           </div>
         </div>
