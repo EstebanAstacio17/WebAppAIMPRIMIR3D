@@ -5,94 +5,69 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './dashboard.module.css';
-
-interface Order {
-  id: string;
-  customer: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  notes?: string;
-  items: Array<{ title: string; quantity: number; price: number }>;
-  total: number;
-  status: 'pending' | 'payment_confirmed' | 'in_production' | 'completed';
-  date: string;
-}
-
-interface UserSession {
-  name: string;
-  email: string;
-}
-
-const initialDemoOrders: Order[] = [
-  {
-    id: 'AIM-1025',
-    customer: 'Juan Pérez',
-    email: 'juan@correo.com',
-    items: [{ title: 'Soporte Gamer para Auriculares', quantity: 1, price: 950 }],
-    total: 950,
-    status: 'in_production',
-    date: 'Hoy',
-  },
-  {
-    id: 'AIM-1024',
-    customer: 'Juan Pérez',
-    email: 'juan@correo.com',
-    items: [{ title: 'Dragón Mítico & Mecha 8K', quantity: 1, price: 1850 }],
-    total: 1850,
-    status: 'payment_confirmed',
-    date: 'Ayer',
-  },
-];
+import { Order } from '@/types/product';
+import { getStoredOrders, cancelOrderById } from '@/utils/orderStorage';
+import { getCurrentUser } from '@/utils/authRoles';
 
 export default function DashboardPage() {
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [allOrders, setAllOrders] = useState<Order[]>(initialDemoOrders);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>(initialDemoOrders);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+
+  const loadDashboardData = () => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+
+    const orders = getStoredOrders();
+    setAllOrders(orders);
+
+    if (user && user.email) {
+      const clientEmail = user.email.toLowerCase().trim();
+      const userOrders = orders.filter(
+        (o) => (o.email && o.email.toLowerCase().trim() === clientEmail) || (user.name && o.customer.toLowerCase().includes(user.name.toLowerCase()))
+      );
+      // Si tiene pedidos propios los muestra; si no, muestra todos los pedidos recientes
+      setFilteredOrders(userOrders.length > 0 ? userOrders : orders);
+    } else {
+      setFilteredOrders(orders);
+    }
+  };
 
   useEffect(() => {
-    // 1. Check client session
-    try {
-      const userStr = localStorage.getItem('aimprimir3d_user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        setCurrentUser(user);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    loadDashboardData();
+    setLoading(false);
 
-    // 2. Load orders
-    try {
-      const saved = localStorage.getItem('aimprimir3d_orders');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.length > 0) {
-          const merged = [...parsed];
-          initialDemoOrders.forEach((demo) => {
-            if (!merged.some((m) => m.id === demo.id)) {
-              merged.push(demo);
-            }
-          });
-          setAllOrders(merged);
-          setFilteredOrders(merged);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    const handleOrdersUpdated = () => {
+      loadDashboardData();
+    };
+
+    window.addEventListener('aimprimir3d_orders_updated', handleOrdersUpdated);
+    window.addEventListener('storage', handleOrdersUpdated);
+    window.addEventListener('focus', handleOrdersUpdated);
+
+    return () => {
+      window.removeEventListener('aimprimir3d_orders_updated', handleOrdersUpdated);
+      window.removeEventListener('storage', handleOrdersUpdated);
+      window.removeEventListener('focus', handleOrdersUpdated);
+    };
   }, []);
+
+  const handleCancelClientOrder = (orderId: string) => {
+    if (confirm(`¿Estás seguro de que deseas cancelar tu pedido #${orderId}?`)) {
+      cancelOrderById(orderId);
+      loadDashboardData();
+    }
+  };
 
   const handleLogout = () => {
     try {
       localStorage.removeItem('aimprimir3d_user');
       document.cookie = 'auth_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       setCurrentUser(null);
+      window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
     } catch (e) {
       console.error(e);
     }
@@ -101,7 +76,7 @@ export default function DashboardPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
-      setFilteredOrders(allOrders);
+      loadDashboardData();
       return;
     }
     const cleanQuery = searchQuery.trim().toLowerCase().replace('#', '');
@@ -122,6 +97,8 @@ export default function DashboardPage() {
         return <span className={styles.statusBadgeProduction}>🖨️ En Fabricación</span>;
       case 'completed':
         return <span className={styles.statusBadgeCompleted}>✅ Entregado / Listo</span>;
+      case 'cancelled':
+        return <span style={{ background: '#fee2e2', color: '#dc2626', padding: '4px 10px', borderRadius: '980px', fontSize: '0.8rem', fontWeight: 600 }}>❌ Cancelado</span>;
       default:
         return <span className={styles.statusBadgePending}>⏳ Pendiente de Pago</span>;
     }
@@ -177,7 +154,7 @@ export default function DashboardPage() {
           <div>
             <h1 className={styles.title}>Mis Encargos & Rastreo</h1>
             <p className={styles.subtitle}>
-              Bienvenido, <strong>{currentUser.name}</strong> ({currentUser.email}). Aquí puedes ver el estado de tus piezas.
+              Bienvenido, <strong>{currentUser.name}</strong> ({currentUser.email}). Aquí puedes ver el estado en tiempo real de tus piezas.
             </p>
           </div>
           <button
@@ -196,7 +173,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '1.3rem' }}>🔍</span>
             <input
               type="text"
-              placeholder="Buscar por ID de encargo (ej. #AIM-1025)..."
+              placeholder="Buscar por #ID de pedido (ej. AIM-1025)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -217,7 +194,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
-                  setFilteredOrders(allOrders);
+                  loadDashboardData();
                 }}
                 className="btn btn-outline-dark"
                 style={{ padding: '11px 16px', fontSize: '0.9rem' }}
@@ -242,7 +219,14 @@ export default function DashboardPage() {
               {filteredOrders.map((ord) => (
                 <div key={ord.id} className={styles.orderCard}>
                   <div className={styles.orderHeader}>
-                    <span className={styles.orderId}>Pedido #{ord.id}</span>
+                    <div>
+                      <span className={styles.orderId}>Pedido #{ord.id}</span>
+                      {ord.trackingNumber && (
+                        <div style={{ fontSize: '0.8rem', color: '#0071e3', fontWeight: 600, marginTop: '2px' }}>
+                          🚚 Guía de Envío: {ord.trackingNumber}
+                        </div>
+                      )}
+                    </div>
                     {getStatusBadge(ord.status)}
                   </div>
 
@@ -250,7 +234,7 @@ export default function DashboardPage() {
                     {ord.items && ord.items.length > 0 ? (
                       ord.items.map((it, idx) => (
                         <div key={idx}>
-                          • {it.quantity}x {it.title} (RD${(it.price * it.quantity).toLocaleString()})
+                          • {it.quantity}x {it.title} (RD${((it.price || it.unitPrice || 0) * (it.quantity || 1)).toLocaleString()})
                         </div>
                       ))
                     ) : (
@@ -292,11 +276,24 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className={styles.orderFooter}>
-                    <span>Fecha: {ord.date}</span>
-                    <strong style={{ color: '#1d1d1f' }}>
-                      Total: RD${(ord.total || 0).toLocaleString()}
-                    </strong>
+                  <div className={styles.orderFooter} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ fontSize: '0.85rem' }}>
+                      <span style={{ color: '#64748b', marginRight: '10px' }}>Fecha: {ord.date}</span>
+                      <strong style={{ color: '#1d1d1f' }}>
+                        Total: RD${(ord.total || 0).toLocaleString()}
+                      </strong>
+                    </div>
+
+                    {ord.status !== 'completed' && ord.status !== 'cancelled' && (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelClientOrder(ord.id)}
+                        className="btn btn-outline-dark"
+                        style={{ padding: '4px 12px', fontSize: '0.78rem', color: '#ef4444', borderColor: '#fca5a5' }}
+                      >
+                        Cancelar Pedido
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -340,7 +337,7 @@ export default function DashboardPage() {
               <div className={styles.notifItem}>
                 <span className={styles.notifTitle}>📦 Tiempos de Entrega</span>
                 <p className={styles.notifDesc}>
-                  Tiempo promedio de 24 a 48 horas una vez confirmado el pago.
+                  Modelos en stock: Entrega inmediata (24h). Modelos bajo encargo: 48 a 72 horas.
                 </p>
               </div>
             </div>

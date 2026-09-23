@@ -22,27 +22,34 @@ export default function Catalogo() {
   const { addToCart } = useCart();
 
   useEffect(() => {
-    // Load products
-    const loaded = getStoredProducts();
-    setProducts(loaded);
+    const refreshCatalog = () => {
+      const loaded = getStoredProducts();
+      setProducts(loaded);
+
+      // Check admin role
+      const user = getCurrentUser();
+      setIsAdmin(isUserAdmin(user));
+    };
+
+    refreshCatalog();
 
     // Initial quantities = 1 for all products
     const initialQty: Record<string | number, number> = {};
-    loaded.forEach((p) => {
+    getStoredProducts().forEach((p) => {
       initialQty[p.id] = 1;
     });
     setQuantities(initialQty);
 
-    // Check admin role
-    const user = getCurrentUser();
-    setIsAdmin(isUserAdmin(user));
+    window.addEventListener('aimprimir3d_products_updated', refreshCatalog);
+    window.addEventListener('aimprimir3d_auth_changed', refreshCatalog);
+    window.addEventListener('storage', refreshCatalog);
+    window.addEventListener('focus', refreshCatalog);
 
-    const handleProductsUpdated = () => {
-      setProducts(getStoredProducts());
-    };
-    window.addEventListener('aimprimir3d_products_updated', handleProductsUpdated);
     return () => {
-      window.removeEventListener('aimprimir3d_products_updated', handleProductsUpdated);
+      window.removeEventListener('aimprimir3d_products_updated', refreshCatalog);
+      window.removeEventListener('aimprimir3d_auth_changed', refreshCatalog);
+      window.removeEventListener('storage', refreshCatalog);
+      window.removeEventListener('focus', refreshCatalog);
     };
   }, []);
 
@@ -126,9 +133,15 @@ export default function Catalogo() {
                 <div className={styles.imageContainer}>
                   {/* STOCK STATUS BADGE */}
                   {product.stockType === 'in_stock' ? (
-                    <span className={styles.stockBadgeInStock}>
-                      🟢 En Existencia ({product.stockQuantity} disponibles)
-                    </span>
+                    (product.stockQuantity || 0) > 0 ? (
+                      <span className={styles.stockBadgeInStock}>
+                        🟢 En Existencia ({product.stockQuantity} disponibles)
+                      </span>
+                    ) : (
+                      <span style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 3, background: 'rgba(239, 68, 68, 0.92)', color: '#fff', padding: '4px 10px', borderRadius: '980px', fontSize: '0.75rem', fontWeight: 700 }}>
+                        🔴 Agotado en Almacén
+                      </span>
+                    )
                   ) : (
                     <span className={styles.stockBadgeOnDemand}>
                       ⏳ Fabricación Bajo Encargo
@@ -201,46 +214,68 @@ export default function Catalogo() {
                     </button>
                   )}
 
-                  <div className={styles.productMeta}>
-                    <div className={styles.priceCol}>
-                      <span className={styles.productPrice}>
-                        RD${currentUnitPrice.toLocaleString()}
-                      </span>
-                      {currentQty > 1 && (
-                        <span className={styles.priceNote}>
-                          Total: RD${(currentUnitPrice * currentQty).toLocaleString()}
+                  {/* ACTIONS: STAFF VS CLIENT */}
+                  {isAdmin ? (
+                    <div className={styles.productMeta} style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
+                      <div className={styles.priceCol}>
+                        <span className={styles.productPrice}>
+                          RD${product.price.toLocaleString()}
                         </span>
-                      )}
-                    </div>
-
-                    <div className={styles.qtyRow}>
-                      <div className={styles.qtyPicker}>
-                        <button
-                          type="button"
-                          onClick={() => handleQtyChange(product.id, -1)}
-                          className={styles.qtyBtn}
-                        >
-                          -
-                        </button>
-                        <span className={styles.qtyVal}>{currentQty}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleQtyChange(product.id, 1)}
-                          className={styles.qtyBtn}
-                        >
-                          +
-                        </button>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                          {product.stockType === 'in_stock' ? `📦 Stock: ${product.stockQuantity || 0} unidades` : '⏳ Fabricación Bajo Encargo'}
+                        </span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleAddProduct(product)}
-                        className={`btn btn-primary ${styles.addToCart}`}
+                      <Link
+                        href={`/admin?editProductId=${product.id}`}
+                        className="btn btn-outline-dark"
+                        style={{ padding: '8px 14px', fontSize: '0.84rem', fontWeight: 600, color: '#0071e3', borderColor: '#bae6fd' }}
                       >
-                        + Añadir
-                      </button>
+                        ⚙️ Modificar en Panel
+                      </Link>
                     </div>
-                  </div>
+                  ) : (
+                    <div className={styles.productMeta}>
+                      <div className={styles.priceCol}>
+                        <span className={styles.productPrice}>
+                          RD${currentUnitPrice.toLocaleString()}
+                        </span>
+                        {currentQty > 1 && (
+                          <span className={styles.priceNote}>
+                            Total: RD${(currentUnitPrice * currentQty).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={styles.qtyRow}>
+                        <div className={styles.qtyPicker}>
+                          <button
+                            type="button"
+                            onClick={() => handleQtyChange(product.id, -1)}
+                            className={styles.qtyBtn}
+                          >
+                            -
+                          </button>
+                          <span className={styles.qtyVal}>{currentQty}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleQtyChange(product.id, 1)}
+                            className={styles.qtyBtn}
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAddProduct(product)}
+                          className={`btn btn-primary ${styles.addToCart}`}
+                        >
+                          + Añadir
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );

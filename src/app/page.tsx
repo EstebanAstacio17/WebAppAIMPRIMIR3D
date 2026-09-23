@@ -1,41 +1,36 @@
 'use client';
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./page.module.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
+import { Product } from "@/types/product";
+import { getStoredProducts } from "@/utils/productStorage";
+import { getCurrentUser, isUserAdmin } from "@/utils/authRoles";
 
 export default function Home() {
   const { addToCart } = useCart();
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const featuredProducts = [
-    {
-      id: 1,
-      title: "Dragón Mítico & Mecha 8K",
-      desc: "Máximo nivel de detalle en resina gris espacial de alta definición.",
-      price: 1850,
-      image: "/img/resin_figures.jpg",
-      category: "Coleccionables",
-    },
-    {
-      id: 2,
-      title: "Soporte Gamer para Auriculares",
-      desc: "Diseño ergonómico y resistente en filamento reforzado de alta durabilidad.",
-      price: 950,
-      image: "/img/slide1.png",
-      category: "Accesorios",
-    },
-    {
-      id: 3,
-      title: "Lámpara Litofanía con Foto",
-      desc: "Tu fotografía cobra vida en relieve tridimensional al encender la luz.",
-      price: 1450,
-      image: "/img/slide2.png",
-      category: "Hogar & Regalos",
-    },
-  ];
+  useEffect(() => {
+    const products = getStoredProducts();
+    setFeaturedProducts(products.slice(0, 3));
+
+    const user = getCurrentUser();
+    setIsAdmin(isUserAdmin(user));
+
+    const handleUpdate = () => {
+      setFeaturedProducts(getStoredProducts().slice(0, 3));
+    };
+    window.addEventListener('aimprimir3d_products_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('aimprimir3d_products_updated', handleUpdate);
+    };
+  }, []);
 
   return (
     <>
@@ -73,20 +68,30 @@ export default function Home() {
             </div>
 
             <div className={styles.heroActions}>
-              <a
-                href="https://wa.me/18494622228?text=Hola!%20Quiero%20cotizar%20un%20proyecto%20de%20fabricacion%20o%20impresion%203D."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{ padding: '14px 30px', fontSize: '0.98rem' }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                </svg>
-                Cotizar Proyecto por WhatsApp
-              </a>
+              {!isAdmin ? (
+                <a
+                  href="https://wa.me/18494622228?text=Hola!%20Quiero%20cotizar%20un%20proyecto%20de%20fabricacion%20o%20impresion%203D."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{ padding: '14px 30px', fontSize: '0.98rem' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                  </svg>
+                  Cotizar Proyecto por WhatsApp
+                </a>
+              ) : (
+                <Link
+                  href="/admin"
+                  className="btn btn-primary"
+                  style={{ padding: '14px 30px', fontSize: '0.98rem', background: '#0f172a', borderColor: '#0f172a' }}
+                >
+                  ⚙️ Consola de Gestión & Catálogo
+                </Link>
+              )}
               <Link href="/catalogo" className="btn btn-outline-titanium" style={{ padding: '14px 28px', fontSize: '0.98rem' }}>
-                Explorar Catálogo
+                Explorar Catálogo Completo
               </Link>
             </div>
           </div>
@@ -155,7 +160,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. TRES SOLUCIONES CLARAS (SIN SATURACIÓN) */}
+      {/* 3. TRES SOLUCIONES CLARAS */}
       <section className={styles.pillarsSection}>
         <div className="container">
           <div className={styles.sectionHeader}>
@@ -167,7 +172,6 @@ export default function Home() {
           </div>
 
           <div className={styles.pillarsGrid}>
-            {/* PILAR 1 */}
             <div className={styles.pillarCard}>
               <div className={styles.pillarIconWrap}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -179,17 +183,11 @@ export default function Home() {
               <p className={styles.pillarDesc}>
                 Fabricación de piezas mecánicas resistentes a la fricción, impacto o temperatura en PETG, ABS y Nylon para maquinaria o reemplazos difíciles de encontrar.
               </p>
-              <a
-                href="https://wa.me/18494622228?text=Hola!%20Quiero%20cotizar%20un%20repuesto%20o%20pieza%20mecanica."
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.pillarLink}
-              >
-                Cotizar pieza a medida →
-              </a>
+              <Link href="/catalogo" className={styles.pillarLink}>
+                Ver opciones en catálogo →
+              </Link>
             </div>
 
-            {/* PILAR 2 */}
             <div className={styles.pillarCard}>
               <div className={styles.pillarIconWrap}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -205,7 +203,6 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* PILAR 3 */}
             <div className={styles.pillarCard}>
               <div className={styles.pillarIconWrap}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -228,7 +225,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. SHOWCASE DE PRODUCTOS DESTACADOS */}
+      {/* 4. SHOWCASE DE PRODUCTOS DESTACADOS DINÁMICOS */}
       <section className={styles.showcaseSection}>
         <div className="container">
           <div className={styles.sectionHeader}>
@@ -243,7 +240,7 @@ export default function Home() {
             {featuredProducts.map((p) => (
               <div key={p.id} className={styles.productCard}>
                 <div className={styles.productImgBox}>
-                  <span className={styles.productCategoryBadge}>{p.category}</span>
+                  <span className={styles.productCategoryBadge}>{p.categoria}</span>
                   <Image
                     src={p.image}
                     alt={p.title}
@@ -252,10 +249,17 @@ export default function Home() {
                   />
                 </div>
                 <div className={styles.productBody}>
-                  <h4 className={styles.productTitle}>{p.title}</h4>
-                  <p className={styles.productDesc}>{p.desc}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 className={styles.productTitle}>{p.title}</h4>
+                  </div>
+                  <p className={styles.productDesc}>{p.description}</p>
                   <div className={styles.productFooter}>
-                    <span className={styles.productPrice}>RD${p.price.toLocaleString()}</span>
+                    <div>
+                      <span className={styles.productPrice}>RD${p.price.toLocaleString()}</span>
+                      <div style={{ fontSize: '0.75rem', color: p.stockType === 'in_stock' ? '#16a34a' : '#0284c7', fontWeight: 600 }}>
+                        {p.stockType === 'in_stock' ? `🟢 En Stock (${p.stockQuantity}u)` : '⏳ Bajo Encargo'}
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() =>
@@ -264,7 +268,12 @@ export default function Home() {
                           title: p.title,
                           price: p.price,
                           image: p.image,
-                          category: p.category,
+                          category: p.categoria,
+                          stockType: p.stockType,
+                          stockQuantity: p.stockQuantity,
+                          volumePricing: p.volumePricing,
+                          onDemandPolicies: p.onDemandPolicies,
+                          quantity: 1,
                         })
                       }
                       className="btn btn-primary"
@@ -280,7 +289,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. CÓMO FUNCIONA (SIMPLE Y TRANSPARENTE) */}
+      {/* 5. CÓMO FUNCIONA */}
       <section className={styles.stepsSection}>
         <div className="container">
           <div className={styles.sectionHeader}>
@@ -328,16 +337,7 @@ export default function Home() {
               Habla directamente con un técnico para asesorarte sobre materiales, cotización y tiempos de entrega.
             </p>
             <div className={styles.ctaActions}>
-              <a
-                href="https://wa.me/18494622228?text=Hola!%20Tengo%20una%20idea%20o%20proyecto%20para%20cotizar."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{ padding: '14px 32px', fontSize: '1rem' }}
-              >
-                💬 Iniciar Consulta por WhatsApp
-              </a>
-              <Link href="/catalogo" className="btn btn-white" style={{ padding: '14px 32px', fontSize: '1rem' }}>
+              <Link href="/catalogo" className="btn btn-primary" style={{ padding: '14px 32px', fontSize: '1rem' }}>
                 Ver Todo el Catálogo
               </Link>
             </div>

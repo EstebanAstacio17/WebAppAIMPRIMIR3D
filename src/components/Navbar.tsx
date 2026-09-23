@@ -34,35 +34,40 @@ export default function Navbar() {
 
     checkAuth();
     window.addEventListener("storage", checkAuth);
+    window.addEventListener("aimprimir3d_auth_changed", checkAuth);
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("storage", checkAuth);
+      window.removeEventListener("aimprimir3d_auth_changed", checkAuth);
     };
   }, []);
 
   return (
     <>
-      {/* TOP ANNOUNCEMENT BAR */}
-      <div className={styles.topAnnouncement}>
-        <div className={`container ${styles.topAnnouncementInner}`}>
-          <div className={styles.announcementLeft}>
-            <span className="status-dot"></span>
-            <span className={styles.announcementText}>
-              <strong>Piezas y Diseños Únicos a Medida:</strong> Cobertura y envíos seguros a todo el país
-            </span>
-          </div>
-          <div className={styles.announcementRight}>
-            <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.topContact}>
-              <span>WhatsApp:</span> <strong>849-462-2228</strong>
-            </a>
-            <span className={styles.divider}>|</span>
-            <a href="mailto:info.aimprimir3d@gmail.com" className={styles.topContact}>
-              info.aimprimir3d@gmail.com
-            </a>
+      {/* TOP ANNOUNCEMENT BAR (SÓLO VISIBLE PARA CLIENTES/VISITANTES, OCULTO PARA STAFF) */}
+      {!isAdmin && (
+        <div className={styles.topAnnouncement}>
+          <div className={`container ${styles.topAnnouncementInner}`}>
+            <div className={styles.announcementLeft}>
+              <span className="status-dot"></span>
+              <span className={styles.announcementText}>
+                <strong>Piezas y Diseños Únicos a Medida:</strong> Cobertura y envíos seguros a todo el país
+              </span>
+            </div>
+
+            <div className={styles.announcementRight}>
+              <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.topContact}>
+                <span>WhatsApp:</span> <strong>849-462-2228</strong>
+              </a>
+              <span className={styles.divider}>|</span>
+              <a href="mailto:info.aimprimir3d@gmail.com" className={styles.topContact}>
+                info.aimprimir3d@gmail.com
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* FLOATING / STICKY GLASS NAVBAR */}
       <header className={`${styles.header} ${scrolled ? styles.headerScrolled : ''}`}>
@@ -79,7 +84,7 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* DESKTOP CLIENT NAVIGATION */}
+          {/* DESKTOP CLIENT / STAFF NAVIGATION */}
           <nav className={styles.desktopNav}>
             <Link href="/" className={styles.navItem}>
               Inicio
@@ -87,13 +92,15 @@ export default function Navbar() {
             <Link href="/catalogo" className={styles.navItem}>
               Catálogo
             </Link>
-            {/* ONLY VISIBLE WHEN CLIENT IS LOGGED IN */}
-            {userName && (
+
+            {/* MIS PEDIDOS - VISIBLE SOLO PARA CLIENTES REGISTRADOS */}
+            {userName && !isAdmin && (
               <Link href="/dashboard" className={styles.navItem}>
                 Mis Pedidos
               </Link>
             )}
-            {/* ONLY VISIBLE TO AIMPRIMIR3D ADMINS */}
+
+            {/* ONLY VISIBLE TO AIMPRIMIR3D STAFF */}
             {isAdmin && (
               <Link
                 href="/admin"
@@ -107,27 +114,34 @@ export default function Navbar() {
                   fontSize: '0.85rem',
                 }}
               >
-                ⚙️ Gestión aImprimir3D
+                ⚙️ Gestión & Inventario
               </Link>
             )}
-            <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.navItem}>
-              Contacto
-            </a>
+
+            {/* CONTACTO - OCULTO PARA EL STAFF DE AIMPRIMIR3D */}
+            {!isAdmin && (
+              <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.navItem}>
+                Contacto
+              </a>
+            )}
           </nav>
 
           {/* RIGHT ACTIONS */}
           <div className={styles.navActions}>
-            <Link href="/cart" className={styles.cartBtn} title="Ver Carrito">
-              <span className={styles.cartIcon}>🛒</span>
-              {totalCount > 0 && (
-                <span className={styles.cartBadge}>{totalCount}</span>
-              )}
-            </Link>
+            {/* CARRITO: TOTALMENTE OCULTO PARA EL STAFF */}
+            {!isAdmin && (
+              <Link href="/cart" className={styles.cartBtn} title="Ver Carrito">
+                <span className={styles.cartIcon}>🛒</span>
+                {totalCount > 0 && (
+                  <span className={styles.cartBadge}>{totalCount}</span>
+                )}
+              </Link>
+            )}
 
             {userName ? (
-              <Link href="/dashboard" className={styles.accountBtn}>
-                <span className={styles.userIcon}>👤</span>
-                <span>Hola, {userName}</span>
+              <Link href={isAdmin ? "/admin" : "/dashboard"} className={styles.accountBtn}>
+                <span className={styles.userIcon}>{isAdmin ? "🛠️" : "👤"}</span>
+                <span>{isAdmin ? "Panel Staff" : `Hola, ${userName}`}</span>
               </Link>
             ) : (
               <Link href="/auth/login" className={styles.accountBtn}>
@@ -136,9 +150,15 @@ export default function Navbar() {
               </Link>
             )}
 
-            <Link href="/catalogo" className="btn btn-primary" style={{ padding: '9px 20px', fontSize: '0.88rem' }}>
-              <span>Iniciar Encargo</span>
-            </Link>
+            {isAdmin ? (
+              <Link href="/admin" className="btn btn-outline-dark" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+                ⚙️ Consola Admin
+              </Link>
+            ) : (
+              <Link href="/catalogo" className="btn btn-primary" style={{ padding: '9px 20px', fontSize: '0.88rem' }}>
+                Iniciar Encargo
+              </Link>
+            )}
 
             {/* MOBILE HAMBURGER BUTTON */}
             <button 
@@ -162,38 +182,47 @@ export default function Navbar() {
             <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
               📦 Catálogo de Productos
             </Link>
-            {userName && (
+            {!isAdmin && (
+              <Link href="/cart" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+                🛒 Ver Carrito ({totalCount})
+              </Link>
+            )}
+            {userName && !isAdmin && (
               <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
                 🔍 Mis Pedidos
               </Link>
             )}
             {isAdmin && (
-              <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem} style={{ color: '#0071e3', fontWeight: 600 }}>
-                ⚙️ Gestión aImprimir3D
+              <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem} style={{ color: '#38bdf8', fontWeight: 600 }}>
+                ⚙️ Consola de Gestión & Stock
               </Link>
             )}
-            <a 
-              href="https://wa.me/18494622228" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              onClick={() => setMobileMenuOpen(false)} 
-              className={styles.mobileNavItem}
-            >
-              💬 Contacto WhatsApp
-            </a>
+            {!isAdmin && (
+              <a 
+                href="https://wa.me/18494622228" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={() => setMobileMenuOpen(false)} 
+                className={styles.mobileNavItem}
+              >
+                💬 Contacto WhatsApp
+              </a>
+            )}
             <div className={styles.mobileMenuDivider}></div>
             {userName ? (
-              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-                👤 Panel de {userName}
+              <Link href={isAdmin ? "/admin" : "/dashboard"} onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+                {isAdmin ? "🛠️ Consola aImprimir3D" : `👤 Panel de ${userName}`}
               </Link>
             ) : (
               <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
                 👤 Iniciar Sesión / Registrarse
               </Link>
             )}
-            <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className="btn btn-primary" style={{ marginTop: '10px' }}>
-              Iniciar Encargo Ahora
-            </Link>
+            {!isAdmin && (
+              <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className="btn btn-primary" style={{ marginTop: '10px' }}>
+                Iniciar Encargo
+              </Link>
+            )}
           </div>
         )}
       </header>

@@ -8,48 +8,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './admin.module.css';
 import { Product, VolumeTier, Order } from '@/types/product';
-import { getStoredProducts, saveStoredProducts, initialMockProducts } from '@/utils/productStorage';
+import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts } from '@/utils/productStorage';
+import { getStoredOrders, saveStoredOrders, createNewOrder, updateOrderStatus, initialMockOrders } from '@/utils/orderStorage';
 import { getCurrentUser, isUserAdmin } from '@/utils/authRoles';
-
-const defaultOrders: Order[] = [
-  {
-    id: 'AIM-1025',
-    customer: 'Juan Pérez',
-    email: 'juan@correo.com',
-    phone: '849-555-1234',
-    address: 'Santo Domingo, Piantini',
-    notes: 'Color negro mate preferiblemente',
-    items: [{ title: 'Soporte Gamer para Auriculares', quantity: 1, unitPrice: 950, price: 950 }],
-    total: 950,
-    status: 'in_production',
-    date: 'Hoy',
-    trackingNumber: 'VIMENCA-88912',
-  },
-  {
-    id: 'AIM-1024',
-    customer: 'María Gómez',
-    email: 'maria@correo.com',
-    phone: '829-444-5678',
-    address: 'Santiago de los Caballeros',
-    notes: 'Impresión en resina gris 8K',
-    items: [{ title: 'Dragón Mítico & Mecha 8K', quantity: 1, unitPrice: 1850, price: 1850 }],
-    total: 1850,
-    status: 'payment_confirmed',
-    date: 'Ayer',
-  },
-  {
-    id: 'AIM-1023',
-    customer: 'Carlos Ramírez',
-    email: 'carlos@empresa.do',
-    phone: '809-333-9876',
-    address: 'Distrito Nacional',
-    notes: 'Lote corporativo de 20 unidades con logo',
-    items: [{ title: 'Llaveros Corporativos (Pack)', quantity: 20, unitPrice: 750, price: 15000 }],
-    total: 15000,
-    status: 'pending',
-    date: '20 Sep',
-  },
-];
 
 function AdminContent() {
   const searchParams = useSearchParams();
@@ -62,7 +23,7 @@ function AdminContent() {
   const [activeTab, setActiveTab] = useState<'orders' | 'catalog'>('orders');
 
   // Orders State
-  const [orders, setOrders] = useState<Order[]>(defaultOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [orderFilter, setOrderFilter] = useState<string>('all');
   const [orderSearch, setOrderSearch] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -92,7 +53,7 @@ function AdminContent() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  useEffect(() => {
+  const refreshAdminData = () => {
     // 1. Check if logged in user is admin
     const user = getCurrentUser();
     if (isUserAdmin(user)) {
@@ -104,44 +65,59 @@ function AdminContent() {
       }
     }
 
-    // 2. Load stored products
-    const loadedProducts = getStoredProducts();
-    setProducts(loadedProducts);
+    // 2. Load products
+    setProducts(getStoredProducts());
 
     // 3. Load orders
-    try {
-      const savedOrders = localStorage.getItem('aimprimir3d_orders');
-      if (savedOrders) {
-        const parsed = JSON.parse(savedOrders);
-        if (parsed.length > 0) {
-          const merged = [...parsed];
-          defaultOrders.forEach((def) => {
-            if (!merged.some((m) => m.id === def.id)) merged.push(def);
-          });
-          setOrders(merged);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    setOrders(getStoredOrders());
+  };
 
-    // 4. Auto-open edit modal if query param present
+  useEffect(() => {
+    refreshAdminData();
+
+    // Event listeners for live synchronization across all components
+    const handleOrdersSync = () => setOrders(getStoredOrders());
+    const handleProductsSync = () => setProducts(getStoredProducts());
+
+    window.addEventListener('aimprimir3d_orders_updated', handleOrdersSync);
+    window.addEventListener('aimprimir3d_products_updated', handleProductsSync);
+    window.addEventListener('storage', refreshAdminData);
+    window.addEventListener('focus', refreshAdminData);
+
+    // Auto-open edit modal if query param present
     if (editIdParam) {
-      const found = loadedProducts.find((p) => String(p.id) === String(editIdParam));
+      const currentProducts = getStoredProducts();
+      const found = currentProducts.find((p) => String(p.id) === String(editIdParam));
       if (found) {
         setActiveTab('catalog');
         openEditProductModal(found);
       }
     }
+
+    return () => {
+      window.removeEventListener('aimprimir3d_orders_updated', handleOrdersSync);
+      window.removeEventListener('aimprimir3d_products_updated', handleProductsSync);
+      window.removeEventListener('storage', refreshAdminData);
+      window.removeEventListener('focus', refreshAdminData);
+    };
   }, [editIdParam]);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (adminPassword === 'aimprimir2026' || adminPassword === 'admin3d' || adminPassword === '1234') {
       sessionStorage.setItem('aimprimir3d_admin_auth', 'true');
+      localStorage.setItem('aimprimir3d_staff_session', 'true');
+      localStorage.setItem('aimprimir3d_user', JSON.stringify({
+        name: 'Staff aImprimir3D',
+        email: 'admin@aimprimir3d.com',
+        role: 'admin',
+        provider: 'staff_gate',
+        loggedInAt: new Date().toISOString(),
+      }));
       setIsAdminLoggedIn(true);
       setAdminError(null);
       showToast('🔓 Acceso concedido al panel de aImprimir3D');
+      window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
     } else {
       setAdminError('Contraseña o PIN incorrecto.');
     }
@@ -149,21 +125,50 @@ function AdminContent() {
 
   const handleAdminLogout = () => {
     sessionStorage.removeItem('aimprimir3d_admin_auth');
+    localStorage.removeItem('aimprimir3d_staff_session');
+    localStorage.removeItem('aimprimir3d_user');
     setIsAdminLoggedIn(false);
+    window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
+  };
+
+  const handleCreateTestOrder = () => {
+    const randomId = `AIM-${Math.floor(2000 + Math.random() * 8000)}`;
+    const testOrder: Order = {
+      id: randomId,
+      customer: 'Cliente Prueba En Vivo',
+      email: 'cliente@prueba.do',
+      phone: '809-555-9988',
+      address: 'Santo Domingo, Bella Vista',
+      notes: 'Pedido de prueba en vivo para verificar stock y logística',
+      items: [
+        { productId: 2, title: 'Soporte Articulado Gamer para Headset', quantity: 1, unitPrice: 950, price: 950, stockType: 'in_stock' }
+      ],
+      total: 950,
+      status: 'pending',
+      date: 'Hoy',
+    };
+    createNewOrder(testOrder);
+    refreshAdminData();
+    showToast(`🎉 Pedido #${randomId} creado y stock descontado`);
+  };
+
+  const handleResetOrders = () => {
+    if (confirm('¿Restablecer pedidos a los valores predeterminados?')) {
+      saveStoredOrders(initialMockOrders);
+      setOrders(initialMockOrders);
+      showToast('🔄 Lista de pedidos restablecida');
+    }
   };
 
   // --- ORDER MANAGEMENT ---
   const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    const updated = orders.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o));
-    setOrders(updated);
-    localStorage.setItem('aimprimir3d_orders', JSON.stringify(updated));
+    updateOrderStatus(orderId, newStatus);
     showToast(`Estado de pedido #${orderId} actualizado a "${newStatus}"`);
   };
 
   const handleSaveTracking = (orderId: string, tracking: string) => {
-    const updated = orders.map((o) => (o.id === orderId ? { ...o, trackingNumber: tracking } : o));
-    setOrders(updated);
-    localStorage.setItem('aimprimir3d_orders', JSON.stringify(updated));
+    const currentOrder = orders.find((o) => o.id === orderId);
+    updateOrderStatus(orderId, currentOrder ? currentOrder.status : 'in_production', tracking);
     showToast(`Guía de envío #${tracking} guardada`);
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder({ ...selectedOrder, trackingNumber: tracking });
@@ -260,6 +265,22 @@ function AdminContent() {
       saveStoredProducts(filtered);
       showToast('🗑️ Producto eliminado del catálogo');
     }
+  };
+
+  const handleQuickStockChange = (productId: string | number, delta: number) => {
+    const target = products.find((p) => String(p.id) === String(productId));
+    if (!target) return;
+    const currentQty = Number(target.stockQuantity) || 0;
+    const newQty = Math.max(0, currentQty + delta);
+    const updated = updateProductStockDirect(productId, newQty);
+    setProducts(updated);
+    showToast(`📦 Stock de "${target.title}" actualizado a ${newQty} u.`);
+  };
+
+  const handleQuickStockSet = (productId: string | number, val: string) => {
+    const newQty = Math.max(0, parseInt(val, 10) || 0);
+    const updated = updateProductStockDirect(productId, newQty);
+    setProducts(updated);
   };
 
   const handleResetCatalog = () => {
@@ -386,7 +407,7 @@ function AdminContent() {
           </span>
           <h1 className={styles.title}>Panel de Control & Logística</h1>
           <p className={styles.subtitle}>
-            Manejo de pedidos, actualización de catálogo, existencias y precios por volumen.
+            Manejo de pedidos en tiempo real, actualización de existencias de almacén y precios por volumen.
           </p>
         </div>
 
@@ -461,6 +482,7 @@ function AdminContent() {
                 { id: 'payment_confirmed', label: '💳 Pago Confirmado' },
                 { id: 'in_production', label: '🖨️ En Fabricación' },
                 { id: 'completed', label: '✅ Entregados' },
+                { id: 'cancelled', label: '❌ Cancelados' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -472,13 +494,24 @@ function AdminContent() {
               ))}
             </div>
 
-            <input
-              type="text"
-              placeholder="Buscar por #ID, cliente o email..."
-              value={orderSearch}
-              onChange={(e) => setOrderSearch(e.target.value)}
-              className={styles.searchInput}
-            />
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleCreateTestOrder}
+                className="btn btn-outline-dark"
+                style={{ padding: '8px 14px', fontSize: '0.82rem' }}
+                title="Generar un pedido de prueba y comprobar el descuento de stock"
+              >
+                + Simular Pedido Cliente
+              </button>
+              <input
+                type="text"
+                placeholder="Buscar por #ID, cliente o email..."
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                className={styles.searchInput}
+              />
+            </div>
           </div>
 
           {/* ORDERS TABLE */}
@@ -636,7 +669,42 @@ function AdminContent() {
                     </td>
                     <td className={styles.td}>
                       {p.stockType === 'in_stock' ? (
-                        <strong>{p.stockQuantity} unidades</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStockChange(p.id, -1)}
+                            className="btn btn-outline-dark"
+                            style={{ padding: '2px 8px', fontSize: '0.8rem', minWidth: '26px' }}
+                            title="Disminuir 1 unidad"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            value={p.stockQuantity ?? 0}
+                            onChange={(e) => handleQuickStockSet(p.id, e.target.value)}
+                            style={{
+                              width: '52px',
+                              textAlign: 'center',
+                              padding: '4px',
+                              borderRadius: '6px',
+                              border: '1px solid #cbd5e1',
+                              fontWeight: 700,
+                              fontSize: '0.88rem',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStockChange(p.id, 1)}
+                            className="btn btn-outline-dark"
+                            style={{ padding: '2px 8px', fontSize: '0.8rem', minWidth: '26px' }}
+                            title="Aumentar 1 unidad"
+                          >
+                            +
+                          </button>
+                          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>u.</span>
+                        </div>
                       ) : (
                         <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Fabricación a pedido</span>
                       )}

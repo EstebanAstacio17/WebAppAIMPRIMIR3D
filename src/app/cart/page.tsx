@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -8,6 +8,8 @@ import Footer from '@/components/Footer';
 import styles from './cart.module.css';
 import { useCart } from '@/context/CartContext';
 import { Order } from '@/types/product';
+import { createNewOrder } from '@/utils/orderStorage';
+import { getCurrentUser } from '@/utils/authRoles';
 
 export default function CartPage() {
   const { items, updateQuantity, removeFromCart, clearCart, totalPrice } = useCart();
@@ -18,6 +20,14 @@ export default function CartPage() {
   const [notes, setNotes] = useState('');
   const [submittedOrder, setSubmittedOrder] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      if (user.name) setName(user.name);
+      if (user.email) setEmail(user.email);
+    }
+  }, []);
 
   const hasOnDemandItems = items.some((it) => it.stockType === 'on_demand');
 
@@ -53,20 +63,14 @@ export default function CartPage() {
       }),
     };
 
-    // Save to LocalStorage mock database so dashboard & admin immediately reflect it
-    try {
-      const existingOrders = JSON.parse(localStorage.getItem('aimprimir3d_orders') || '[]');
-      existingOrders.unshift(newOrder);
-      localStorage.setItem('aimprimir3d_orders', JSON.stringify(existingOrders));
-    } catch (err) {
-      console.error('Error storing order:', err);
-    }
+    // Crear pedido en almacén central y deducir existencias en almacén en tiempo real
+    createNewOrder(newOrder);
 
     setTimeout(() => {
       setLoading(false);
       setSubmittedOrder(orderId);
       clearCart();
-    }, 800);
+    }, 600);
   };
 
   return (
@@ -266,7 +270,7 @@ export default function CartPage() {
               <span style={{ fontSize: '3.5rem' }}>🎉</span>
               <h2 style={{ fontSize: '1.8rem', color: '#1d1d1f' }}>¡Encargo Recibido con Éxito!</h2>
               <p style={{ color: '#86868b', fontSize: '0.95rem' }}>
-                Tu pedido <strong>#{submittedOrder}</strong> ha sido registrado en nuestro taller. Te contactaremos vía WhatsApp para coordinar la fabricación y el pago.
+                Tu pedido <strong>#{submittedOrder}</strong> ha sido registrado en nuestro taller. Las existencias han sido reservadas y el equipo de aImprimir3D ya puede gestionarlo en su panel.
               </p>
               
               <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '10px' }}>

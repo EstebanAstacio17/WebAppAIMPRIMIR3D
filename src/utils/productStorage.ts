@@ -90,7 +90,7 @@ export const initialMockProducts: Product[] = [
     id: 5,
     title: "Prototipo de Carcasa Electrónica con Rosca",
     description: "Caja para proyectos Arduino/ESP32 con orificios de ventilación, puertos y tapas a presión.",
-    tiempo: "En Existencia",
+    tiempo: "Entrega Inmediata",
     categoria: "Industrial",
     price: 850,
     image: "/img/showcase_precision.jpg",
@@ -136,8 +136,28 @@ export function getStoredProducts(): Product[] {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMockProducts));
       return initialMockProducts;
     }
-    const parsed = JSON.parse(data);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialMockProducts;
+    const parsed: Product[] = JSON.parse(data);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMockProducts));
+      return initialMockProducts;
+    }
+
+    // Normalizar datos para garantizar que existencias y modalidades siempre estén actualizadas
+    const normalized = parsed.map((p) => {
+      const defaultMatch = initialMockProducts.find((def) => String(def.id) === String(p.id));
+      const sType = p.stockType || defaultMatch?.stockType || (p.badge?.includes('Existencia') ? 'in_stock' : 'on_demand');
+      const sQty = p.stockQuantity !== undefined ? Number(p.stockQuantity) : (defaultMatch?.stockQuantity ?? (sType === 'in_stock' ? 10 : 0));
+      return {
+        ...p,
+        stockType: sType,
+        stockQuantity: sQty,
+        badge: sType === 'in_stock' ? (sQty > 0 ? 'En Existencia' : 'Agotado') : (p.badge || 'Bajo Encargo'),
+        volumePricing: p.volumePricing && p.volumePricing.length > 0 ? p.volumePricing : defaultMatch?.volumePricing,
+        onDemandPolicies: p.onDemandPolicies && p.onDemandPolicies.length > 0 ? p.onDemandPolicies : defaultMatch?.onDemandPolicies,
+      };
+    });
+
+    return normalized;
   } catch (err) {
     console.error('Error cargando catálogo de productos:', err);
     return initialMockProducts;
@@ -149,8 +169,89 @@ export function saveStoredProducts(products: Product[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
     window.dispatchEvent(new Event('aimprimir3d_products_updated'));
+    window.dispatchEvent(new Event('storage'));
   } catch (err) {
     console.error('Error guardando catálogo de productos:', err);
+  }
+}
+
+/**
+ * Ajusta la cantidad de existencia directamente para un producto específico
+ */
+export function updateProductStockDirect(productId: string | number, newQuantity: number): Product[] {
+  const current = getStoredProducts();
+  const safeQty = Math.max(0, Math.floor(newQuantity));
+  const updated = current.map((p) => {
+    if (String(p.id) === String(productId)) {
+      return {
+        ...p,
+        stockQuantity: safeQty,
+        badge: safeQty > 0 ? 'En Existencia' : 'Agotado',
+      };
+    }
+    return p;
+  });
+  saveStoredProducts(updated);
+  return updated;
+}
+
+/**
+ * Deduce la existencia en almacén de los productos en stock cuando se realiza un pedido
+ */
+export function deductProductStock(orderedItems: Array<{ productId?: string | number; id?: string | number; quantity: number }>): void {
+  const currentProducts = getStoredProducts();
+  let changed = false;
+
+  const updatedProducts = currentProducts.map((prod) => {
+    const matched = orderedItems.find(
+      (it) => String(it.productId ?? it.id) === String(prod.id)
+    );
+    if (matched && prod.stockType === 'in_stock') {
+      const currentQty = Number(prod.stockQuantity) || 0;
+      const orderQty = Number(matched.quantity) || 1;
+      const remaining = Math.max(0, currentQty - orderQty);
+      changed = true;
+      return {
+        ...prod,
+        stockQuantity: remaining,
+        badge: remaining > 0 ? 'En Existencia' : 'Agotado',
+      };
+    }
+    return prod;
+  });
+
+  if (changed) {
+    saveStoredProducts(updatedProducts);
+  }
+}
+
+/**
+ * Restaura la existencia en almacén cuando un pedido es cancelado
+ */
+export function restoreProductStock(orderedItems: Array<{ productId?: string | number; id?: string | number; quantity: number }>): void {
+  const currentProducts = getStoredProducts();
+  let changed = false;
+
+  const updatedProducts = currentProducts.map((prod) => {
+    const matched = orderedItems.find(
+      (it) => String(it.productId ?? it.id) === String(prod.id)
+    );
+    if (matched && prod.stockType === 'in_stock') {
+      const currentQty = Number(prod.stockQuantity) || 0;
+      const orderQty = Number(matched.quantity) || 1;
+      const restored = currentQty + orderQty;
+      changed = true;
+      return {
+        ...prod,
+        stockQuantity: restored,
+        badge: 'En Existencia',
+      };
+    }
+    return prod;
+  });
+
+  if (changed) {
+    saveStoredProducts(updatedProducts);
   }
 }
 
