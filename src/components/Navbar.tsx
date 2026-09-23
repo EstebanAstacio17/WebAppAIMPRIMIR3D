@@ -40,7 +40,7 @@ export default function Navbar() {
           <div className={styles.announcementLeft}>
             <span className="status-dot"></span>
             <span className={styles.announcementText}>
-              <strong>Granja 3D Operativa:</strong> Impresión FDM & Resina 8K • Envíos a todo el país
+              <strong>Piezas y Diseños Únicos a Medida:</strong> Cobertura y envíos seguros a todo el país
             </span>
           </div>
           <div className={styles.announcementRight}>

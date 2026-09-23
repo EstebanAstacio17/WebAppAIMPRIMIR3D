@@ -10,10 +10,10 @@
 .authCard {
   width: 100%;
   max-width: 440px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(24px) saturate(180%);
   border-radius: 28px;
-  padding: 44px 36px;
+  padding: 40px 32px;
   text-align: center;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -22,7 +22,7 @@
 .logo {
   height: 44px;
   width: auto;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .authTitle {
@@ -35,12 +35,12 @@
 
 .authSubtitle {
   color: #86868b;
-  font-size: 0.95rem;
-  margin-bottom: 28px;
+  font-size: 0.92rem;
+  margin-bottom: 24px;
 }
 
 .formGroup {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -75,7 +75,36 @@
   width: 100%;
   padding: 13px;
   font-size: 0.98rem;
-  margin-top: 10px;
+  margin-top: 8px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 22px 0 18px;
+  color: #86868b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.divider span {
+  padding: 0 12px;
+}
+
+.googleSection {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
 }
 
 .authLinks {

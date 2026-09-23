@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import styles from '../auth.module.css';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function LoginPage() {
     const userObj = {
       name: email.split('@')[0],
       email: email.toLowerCase().trim(),
+      provider: 'credentials',
       loggedInAt: new Date().toISOString(),
     };
 
@@ -41,7 +43,16 @@ export default function LoginPage() {
           <Image src="/img/logonombre.png" alt="Logo" width={180} height={44} className={styles.logo} priority />
         </Link>
         <h1 className={styles.authTitle}>Iniciar Sesión</h1>
-        <p className={styles.authSubtitle}>Accede a tu cuenta para rastrear tus pedidos</p>
+        <p className={styles.authSubtitle}>Accede a tu cuenta para cotizar y dar seguimiento a tus pedidos</p>
+
+        {/* GOOGLE IDENTITY SERVICES BOTÓN NATIVO */}
+        <div className={styles.googleSection}>
+          <GoogleAuthButton text="continue_with" redirectTo="/dashboard" />
+        </div>
+
+        <div className={styles.divider}>
+          <span>o con tu correo</span>
+        </div>
 
         <form onSubmit={handleLogin}>
           <div className={styles.formGroup}>

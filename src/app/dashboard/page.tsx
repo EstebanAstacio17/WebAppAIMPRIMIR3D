@@ -91,6 +91,7 @@ export default function DashboardPage() {
   const handleLogout = () => {
     try {
       localStorage.removeItem('aimprimir3d_user');
+      document.cookie = 'auth_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       setCurrentUser(null);
     } catch (e) {
       console.error(e);

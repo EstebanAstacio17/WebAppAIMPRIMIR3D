@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import styles from '../auth.module.css';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function RegisterPage() {
     const userObj = {
       name: name.trim(),
       email: email.toLowerCase().trim(),
+      provider: 'credentials',
       loggedInAt: new Date().toISOString(),
     };
 
@@ -43,6 +45,15 @@ export default function RegisterPage() {
         </Link>
         <h1 className={styles.authTitle}>Crear Cuenta</h1>
         <p className={styles.authSubtitle}>Únete para cotizar y dar seguimiento en vivo a tus pedidos</p>
+
+        {/* GOOGLE IDENTITY SERVICES BOTÓN NATIVO */}
+        <div className={styles.googleSection}>
+          <GoogleAuthButton text="signup_with" redirectTo="/dashboard" />
+        </div>
+
+        <div className={styles.divider}>
+          <span>o con tu correo</span>
+        </div>
 
         <form onSubmit={handleRegister}>
           <div className={styles.formGroup}>
