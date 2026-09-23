@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './cart.module.css';
 import { useCart } from '@/context/CartContext';
+import { Order } from '@/types/product';
 
 export default function CartPage() {
   const { items, updateQuantity, removeFromCart, clearCart, totalPrice } = useCart();
@@ -18,6 +19,8 @@ export default function CartPage() {
   const [submittedOrder, setSubmittedOrder] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const hasOnDemandItems = items.some((it) => it.stockType === 'on_demand');
+
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) return;
@@ -25,14 +28,22 @@ export default function CartPage() {
     setLoading(true);
     const orderId = `AIM-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const newOrder = {
+    const newOrder: Order = {
       id: orderId,
-      customer: name,
-      email,
-      phone,
-      address,
-      notes,
-      items: [...items],
+      customer: name.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+      notes: notes.trim(),
+      items: items.map((it) => ({
+        productId: it.id,
+        title: it.title,
+        quantity: it.quantity,
+        unitPrice: it.price,
+        price: it.price * it.quantity,
+        image: it.image,
+        stockType: it.stockType,
+      })),
       total: totalPrice,
       status: 'pending',
       date: new Date().toLocaleDateString('es-DO', {
@@ -66,7 +77,7 @@ export default function CartPage() {
         <div className={styles.cartHeader}>
           <h1 className={styles.title}>Tu Carrito de Encargos</h1>
           <p className={styles.subtitle}>
-            Revisa tus artículos y completa la información para enviar tu pedido a nuestro taller.
+            Revisa tus artículos con descuentos automáticos por volumen y completa tus datos de entrega.
           </p>
         </div>
 
@@ -94,8 +105,26 @@ export default function CartPage() {
                         />
                       </div>
                       <div>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '2px' }}>
+                          {item.stockType === 'in_stock' ? (
+                            <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '980px', fontWeight: 600 }}>
+                              🟢 En Existencia
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '980px', fontWeight: 600 }}>
+                              ⏳ Bajo Encargo
+                            </span>
+                          )}
+                        </div>
                         <h4 className={styles.itemTitle}>{item.title}</h4>
-                        <p className={styles.itemPrice}>RD${item.price.toLocaleString()} c/u</p>
+                        <p className={styles.itemPrice}>
+                          RD${item.price.toLocaleString()} c/u
+                          {item.quantity > 1 && (
+                            <span style={{ fontSize: '0.78rem', color: '#64748b', marginLeft: '6px' }}>
+                              (Subtotal: RD${(item.price * item.quantity).toLocaleString()})
+                            </span>
+                          )}
+                        </p>
                       </div>
                     </div>
 
@@ -128,6 +157,13 @@ export default function CartPage() {
                   </div>
                 ))}
               </div>
+
+              {/* NOTICE IF HAS ON DEMAND ITEMS */}
+              {hasOnDemandItems && (
+                <div style={{ marginTop: '16px', padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.82rem', color: '#475569' }}>
+                  <strong>ℹ️ Nota sobre productos Bajo Encargo:</strong> Los modelos bajo encargo se fabrican a medida una vez confirmado el pedido (tiempo estándar: 2 a 4 días hábiles con control de calidad).
+                </div>
+              )}
             </div>
 
             {/* CHECKOUT FORM */}
@@ -186,7 +222,7 @@ export default function CartPage() {
                 <label className={styles.label}>Notas o Enlace de Archivo 3D (Opcional)</label>
                 <input
                   type="text"
-                  placeholder="Color preferido, enlace Drive, detalles"
+                  placeholder="Color preferido, especificaciones técnicas..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className={styles.input}
@@ -199,7 +235,7 @@ export default function CartPage() {
               </div>
 
               <p style={{ fontSize: '0.8rem', color: '#86868b', lineHeight: 1.4 }}>
-                ℹ️ Al confirmar el encargo, nos comunicaremos contigo vía WhatsApp y correo para verificar los detalles y proporcionarte los métodos de pago (transferencia / depósito).
+                ℹ️ Al confirmar el encargo, el equipo de aImprimir3D se comunicará contigo vía WhatsApp para confirmar métodos de pago (transferencia / depósito) e iniciar la producción o despacho.
               </p>
 
               <button
@@ -216,7 +252,7 @@ export default function CartPage() {
           <div className={styles.emptyState}>
             <span style={{ fontSize: '3.5rem' }}>🛒</span>
             <h2>Tu carrito está vacío</h2>
-            <p style={{ color: '#86868b' }}>Explora nuestro catálogo o cotiza una pieza para comenzar tu encargo.</p>
+            <p style={{ color: '#86868b' }}>Explora nuestro catálogo para encargar piezas listas o a medida.</p>
             <Link href="/catalogo" className="btn btn-primary" style={{ marginTop: '10px' }}>
               Explorar Catálogo de Productos
             </Link>

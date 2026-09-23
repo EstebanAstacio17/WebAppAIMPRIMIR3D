@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/context/CartContext";
+import StaffAdminBar from "@/components/StaffAdminBar";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -9,14 +11,14 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "AIMPRIMIR3D | Impresión 3D, Diseño y Prototipos en República Dominicana",
-  description: "Servicios de impresión 3D, diseño 3D, prototipado y fabricación personalizada en República Dominicana. Encarga y gestiona tus pedidos fácilmente.",
+  title: "AIMPRIMIR3D | Fabricación Digital & Prototipos de Precisión",
+  description: "Servicios de impresión 3D de alta precisión, diseño 3D, prototipado y piezas a medida en República Dominicana. Encarga y gestiona tus pedidos fácilmente.",
   icons: {
     icon: "/img/logo.ico",
   },
   openGraph: {
-    title: "AIMPRIMIR3D | Impresión 3D y Diseño 3D",
-    description: "Transformamos ideas en piezas reales mediante impresión 3D, diseño, prototipado y fabricación.",
+    title: "AIMPRIMIR3D | Fabricación Digital de Precisión",
+    description: "Transformamos ideas en piezas reales mediante fabricación aditiva, resina 8K y filamentos técnicos.",
     url: "https://aimprimir3d.com.do/",
     siteName: "AIMPRIMIR3D",
     images: [
@@ -31,8 +33,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { CartProvider } from "@/context/CartContext";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,10 +42,10 @@ export default function RootLayout({
     <html lang="es" className={poppins.variable}>
       <body>
         <CartProvider>
+          <StaffAdminBar />
           <main>{children}</main>
         </CartProvider>
       </body>
     </html>
   );
 }
-

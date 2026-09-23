@@ -18,9 +18,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
 
+    const cleanEmail = email.toLowerCase().trim();
+    const isAdmin = cleanEmail.includes('@aimprimir3d');
+
     const userObj = {
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
+      role: isAdmin ? 'admin' : 'client',
       provider: 'credentials',
       loggedInAt: new Date().toISOString(),
     };

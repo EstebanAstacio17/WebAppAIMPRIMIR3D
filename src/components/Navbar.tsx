@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import styles from "./Navbar.module.css";
 import { useCart } from "@/context/CartContext";
+import { getCurrentUser, isUserAdmin } from "@/utils/authRoles";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { totalCount } = useCart();
 
   useEffect(() => {
@@ -18,18 +20,25 @@ export default function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
 
-    // Check user session
-    try {
-      const userStr = localStorage.getItem("aimprimir3d_user");
-      if (userStr) {
-        const u = JSON.parse(userStr);
-        setUserName(u.name || "Cliente");
+    // Check user session & role
+    const checkAuth = () => {
+      const user = getCurrentUser();
+      if (user) {
+        setUserName(user.name || "Cliente");
+        setIsAdmin(isUserAdmin(user));
+      } else {
+        setUserName(null);
+        setIsAdmin(false);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    };
 
-    return () => window.removeEventListener("scroll", handleScroll);
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("storage", checkAuth);
+    };
   }, []);
 
   return (
@@ -84,6 +93,23 @@ export default function Navbar() {
                 Mis Pedidos
               </Link>
             )}
+            {/* ONLY VISIBLE TO AIMPRIMIR3D ADMINS */}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={styles.navItem}
+                style={{
+                  color: '#38bdf8',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  padding: '4px 12px',
+                  borderRadius: '980px',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                ⚙️ Gestión aImprimir3D
+              </Link>
+            )}
             <a href="https://wa.me/18494622228" target="_blank" rel="noopener noreferrer" className={styles.navItem}>
               Contacto
             </a>
@@ -136,10 +162,14 @@ export default function Navbar() {
             <Link href="/catalogo" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
               📦 Catálogo de Productos
             </Link>
-            {/* ONLY VISIBLE WHEN CLIENT IS LOGGED IN */}
             {userName && (
               <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
                 🔍 Mis Pedidos
+              </Link>
+            )}
+            {isAdmin && (
+              <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem} style={{ color: '#0071e3', fontWeight: 600 }}>
+                ⚙️ Gestión aImprimir3D
               </Link>
             )}
             <a 

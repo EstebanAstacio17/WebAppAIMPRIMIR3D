@@ -1,23 +1,99 @@
 .adminContainer {
-  padding: 60px 0 100px;
-  min-height: 85vh;
+  padding: 40px 0 100px;
+  min-height: 88vh;
 }
 
 .adminHeader {
-  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 28px;
 }
 
 .title {
-  font-size: 2.8rem;
+  font-size: 2.4rem;
   font-weight: 700;
-  color: #1d1d1f;
+  color: #0f172a;
   letter-spacing: -0.03em;
 }
 
 .subtitle {
-  font-size: 1.05rem;
-  color: #86868b;
-  margin-top: 6px;
+  font-size: 0.98rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* TOP VIEW TABS (PEDIDOS VS CATÁLOGO) */
+.mainNavTabs {
+  display: flex;
+  gap: 8px;
+  background: #e2e8f0;
+  padding: 6px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  width: fit-content;
+}
+
+.mainNavTab {
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mainNavTabActive {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* STATS ROW */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 22px 24px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.statValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .controlsBar {
@@ -26,7 +102,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .filterTabs {
@@ -36,24 +112,25 @@
 }
 
 .filterTab {
-  padding: 8px 18px;
+  padding: 8px 16px;
   border-radius: 980px;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  color: #1d1d1f;
-  font-size: 0.88rem;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .filterTab.active, .filterTab:hover {
-  background: #1d1d1f;
+  background: #0f172a;
   color: #ffffff;
+  border-color: #0f172a;
 }
 
 .searchInput {
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 980px;
   border: 1px solid #d2d2d7;
   font-size: 0.9rem;
@@ -85,45 +162,68 @@
 
 .th {
   padding: 14px 12px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #86868b;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid #e5e5ea;
+  border-bottom: 1px solid #e2e8f0;
   text-align: left;
 }
 
 .tr {
-  border-bottom: 1px solid #f5f5f7;
+  border-bottom: 1px solid #f1f5f9;
   transition: background 0.15s ease;
 }
 
 .tr:hover {
-  background: #fbfbfd;
+  background: #f8fafc;
 }
 
 .td {
   padding: 16px 12px;
-  font-size: 0.92rem;
-  color: #1d1d1f;
+  font-size: 0.9rem;
+  color: #0f172a;
 }
 
 .selectStatus {
   padding: 6px 12px;
   border-radius: 8px;
-  border: 1px solid #d2d2d7;
+  border: 1px solid #cbd5e1;
   font-size: 0.85rem;
   background: #ffffff;
-  color: #1d1d1f;
+  color: #0f172a;
   outline: none;
+  font-weight: 500;
 }
 
+/* BADGES */
+.badgeStock {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 980px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badgeOnDemand {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 980px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+/* FORM MODALS */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -135,10 +235,109 @@
   background: #ffffff;
   border-radius: 28px;
   padding: 36px;
-  max-width: 540px;
+  max-width: 620px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.formGroupFull {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.input, .textarea, .select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 0.92rem;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+  border-color: #0071e3;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.volumePricingSection {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tierRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.tierInput {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.85rem;
+  background: #ffffff;
+}
+
+.removeTierBtn {
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 14px 22px;
+  border-radius: 980px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
 }
