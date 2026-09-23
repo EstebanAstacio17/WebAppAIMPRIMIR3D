@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import styles from './dashboard.module.css';
 import { Order } from '@/types/product';
 import { getStoredOrders, cancelOrderById } from '@/utils/orderStorage';
-import { getCurrentUser } from '@/utils/authRoles';
+import { getCurrentUser, logoutUser } from '@/utils/authRoles';
 
 export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
@@ -63,14 +63,9 @@ export default function DashboardPage() {
   };
 
   const handleLogout = () => {
-    try {
-      localStorage.removeItem('aimprimir3d_user');
-      document.cookie = 'auth_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      setCurrentUser(null);
-      window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
-    } catch (e) {
-      console.error(e);
-    }
+    logoutUser();
+    setCurrentUser(null);
+    window.location.href = '/';
   };
 
   const handleSearch = (e: React.FormEvent) => {

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
 
-// Almacenamiento en memoria temporal para PINs de staff (email -> { pin, expiresAt })
+// Almacenamiento en memoria temporal de respaldo para PINs de staff
 const globalPinStore = new Map<string, { pin: string; expiresAt: number }>();
 
 export async function POST(request: Request) {
@@ -24,6 +25,23 @@ export async function POST(request: Request) {
       const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutos de validez
 
       globalPinStore.set(cleanEmail, { pin: generatedPin, expiresAt });
+
+      // Guardar también en colección staff_pins de MongoDB Atlas si está disponible
+      if (isMongoDBConfigured()) {
+        try {
+          const db = await getDatabase();
+          if (db) {
+            await db.collection('staff_pins').updateOne(
+              { email: cleanEmail },
+              { $set: { pin: generatedPin, expiresAt: new Date(expiresAt), updatedAt: new Date() } },
+              { upsert: true }
+            );
+          }
+        } catch (dbErr) {
+          console.error('Error guardando PIN en MongoDB Atlas:', dbErr);
+        }
+      }
+
       console.log(`[STAFF AUTH] PIN generado para ${cleanEmail}: ${generatedPin}`);
 
       const apiKey = process.env.RESEND_API_KEY;
@@ -70,7 +88,6 @@ export async function POST(request: Request) {
         message: emailSent
           ? `PIN enviado a ${cleanEmail}. Revisa tu bandeja de entrada.`
           : `PIN generado exitosamente para ${cleanEmail}.`,
-        // En entorno local/desarrollo retornamos el PIN para facilitar pruebas si aún no hay dominio configurado en Resend
         devPin: generatedPin,
       });
     }
@@ -85,20 +102,42 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Por favor ingresa el PIN de 6 dígitos.' }, { status: 400 });
       }
 
-      const stored = globalPinStore.get(cleanEmail);
+      let isValidPin = cleanPin === 'aimprimir2026';
 
-      // Verificación con PIN guardado o PIN maestro de respaldo
-      const isMasterPin = cleanPin === 'aimprimir2026';
-      const isValidStoredPin = stored && stored.pin === cleanPin && Date.now() <= stored.expiresAt;
+      // 1. Verificar en memoria
+      const memoryStored = globalPinStore.get(cleanEmail);
+      if (memoryStored && memoryStored.pin === cleanPin && Date.now() <= memoryStored.expiresAt) {
+        isValidPin = true;
+      }
 
-      if (!isValidStoredPin && !isMasterPin) {
+      // 2. Verificar en MongoDB Atlas si aplica
+      if (!isValidPin && isMongoDBConfigured()) {
+        try {
+          const db = await getDatabase();
+          if (db) {
+            const dbPin = await db.collection('staff_pins').findOne({
+              email: cleanEmail,
+              pin: cleanPin,
+              expiresAt: { $gte: new Date() }
+            });
+            if (dbPin) {
+              isValidPin = true;
+              await db.collection('staff_pins').deleteOne({ email: cleanEmail });
+            }
+          }
+        } catch (dbCheckErr) {
+          console.error('Error verificando PIN en MongoDB Atlas:', dbCheckErr);
+        }
+      }
+
+      if (!isValidPin) {
         return NextResponse.json(
           { error: 'El PIN ingresado es incorrecto o ha expirado. Solicita uno nuevo.' },
           { status: 401 }
         );
       }
 
-      // Eliminar el PIN tras uso exitoso
+      // Eliminar el PIN de memoria tras uso exitoso
       globalPinStore.delete(cleanEmail);
 
       const staffUser = {

@@ -64,3 +64,20 @@ export function getCurrentUser(): AppUser | null {
     return null;
   }
 }
+
+/**
+ * Cierra la sesión globalmente, limpiando todos los identificadores de cliente y staff
+ */
+export function logoutUser(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('aimprimir3d_user');
+    localStorage.removeItem('aimprimir3d_staff_session');
+    sessionStorage.removeItem('aimprimir3d_admin_auth');
+    document.cookie = 'auth_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.error('Error cerrando sesión:', e);
+  }
+}

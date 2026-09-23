@@ -10,7 +10,7 @@ import styles from './admin.module.css';
 import { Product, VolumeTier, Order } from '@/types/product';
 import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts } from '@/utils/productStorage';
 import { getStoredOrders, saveStoredOrders, createNewOrder, updateOrderStatus, initialMockOrders } from '@/utils/orderStorage';
-import { getCurrentUser, isUserAdmin } from '@/utils/authRoles';
+import { getCurrentUser, isUserAdmin, logoutUser } from '@/utils/authRoles';
 
 function AdminContent() {
   const searchParams = useSearchParams();
@@ -124,11 +124,10 @@ function AdminContent() {
   };
 
   const handleAdminLogout = () => {
-    sessionStorage.removeItem('aimprimir3d_admin_auth');
-    localStorage.removeItem('aimprimir3d_staff_session');
-    localStorage.removeItem('aimprimir3d_user');
+    logoutUser();
     setIsAdminLoggedIn(false);
-    window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
+    showToast('Sesión de staff cerrada');
+    window.location.href = '/';
   };
 
   const handleCreateTestOrder = () => {

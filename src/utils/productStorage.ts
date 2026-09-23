@@ -134,11 +134,14 @@ export function getStoredProducts(): Product[] {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMockProducts));
+      // Iniciar sincronización en segundo plano con MongoDB API
+      syncProductsFromApi();
       return initialMockProducts;
     }
     const parsed: Product[] = JSON.parse(data);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMockProducts));
+      syncProductsFromApi();
       return initialMockProducts;
     }
 
@@ -164,12 +167,39 @@ export function getStoredProducts(): Product[] {
   }
 }
 
+export async function syncProductsFromApi(): Promise<Product[]> {
+  if (typeof window === 'undefined') return initialMockProducts;
+  try {
+    const res = await fetch('/api/products');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.products));
+        window.dispatchEvent(new Event('aimprimir3d_products_updated'));
+        return data.products;
+      }
+    }
+  } catch (e) {
+    // Graceful fallback to cached products
+  }
+  return getStoredProducts();
+}
+
 export function saveStoredProducts(products: Product[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
     window.dispatchEvent(new Event('aimprimir3d_products_updated'));
     window.dispatchEvent(new Event('storage'));
+
+    // Sincronizar en segundo plano con MongoDB Atlas
+    products.forEach((prod) => {
+      fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prod),
+      }).catch(() => {});
+    });
   } catch (err) {
     console.error('Error guardando catálogo de productos:', err);
   }
@@ -192,6 +222,14 @@ export function updateProductStockDirect(productId: string | number, newQuantity
     return p;
   });
   saveStoredProducts(updated);
+
+  // Sync specific stock change to backend API
+  fetch('/api/products', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: productId, stockQuantity: safeQty }),
+  }).catch(() => {});
+
   return updated;
 }
 

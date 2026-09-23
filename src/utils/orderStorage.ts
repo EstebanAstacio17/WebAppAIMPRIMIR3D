@@ -49,6 +49,7 @@ export function getStoredOrders(): Order[] {
     const data = localStorage.getItem(STORAGE_ORDERS_KEY);
     if (!data) {
       localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(initialMockOrders));
+      syncOrdersFromApi();
       return initialMockOrders;
     }
     const parsed = JSON.parse(data);
@@ -57,6 +58,25 @@ export function getStoredOrders(): Order[] {
     console.error('Error cargando pedidos:', err);
     return initialMockOrders;
   }
+}
+
+export async function syncOrdersFromApi(email?: string): Promise<Order[]> {
+  if (typeof window === 'undefined') return initialMockOrders;
+  try {
+    const url = email ? `/api/orders?email=${encodeURIComponent(email)}` : '/api/orders';
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders) && data.orders.length > 0) {
+        localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
+        window.dispatchEvent(new Event('aimprimir3d_orders_updated'));
+        return data.orders;
+      }
+    }
+  } catch (e) {
+    // Graceful fallback to cached orders
+  }
+  return getStoredOrders();
 }
 
 export function saveStoredOrders(orders: Order[]): void {
@@ -77,13 +97,20 @@ export function createNewOrder(order: Order): void {
   const currentOrders = getStoredOrders();
   const updatedOrders = [order, ...currentOrders];
   
-  // 1. Guardar pedido
+  // 1. Guardar pedido en caché local
   saveStoredOrders(updatedOrders);
 
   // 2. Deducir stock de almacén para ítems "en existencia"
   if (order.items && order.items.length > 0) {
     deductProductStock(order.items);
   }
+
+  // 3. Sincronizar en segundo plano con MongoDB Atlas
+  fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order),
+  }).catch(() => {});
 }
 
 /**
@@ -110,6 +137,13 @@ export function cancelOrderById(orderId: string): void {
     if (cancelledOrder.items && cancelledOrder.items.length > 0) {
       restoreProductStock(cancelledOrder.items);
     }
+
+    // Sincronizar con MongoDB Atlas
+    fetch('/api/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, status: 'cancelled' }),
+    }).catch(() => {});
   }
 }
 
@@ -140,4 +174,11 @@ export function updateOrderStatus(orderId: string, status: Order['status'], trac
       restoreProductStock(previousOrder.items);
     }
   }
+
+  // Sincronizar actualización con MongoDB Atlas
+  fetch('/api/orders', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, status, trackingNumber }),
+  }).catch(() => {});
 }

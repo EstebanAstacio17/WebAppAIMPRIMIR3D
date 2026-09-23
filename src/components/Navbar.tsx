@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import styles from "./Navbar.module.css";
 import { useCart } from "@/context/CartContext";
-import { getCurrentUser, isUserAdmin } from "@/utils/authRoles";
+import { getCurrentUser, isUserAdmin, logoutUser } from "@/utils/authRoles";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -23,25 +23,34 @@ export default function Navbar() {
     // Check user session & role
     const checkAuth = () => {
       const user = getCurrentUser();
+      const adminRole = isUserAdmin(user);
+      setIsAdmin(adminRole);
       if (user) {
-        setUserName(user.name || "Cliente");
-        setIsAdmin(isUserAdmin(user));
+        setUserName(user.name || (adminRole ? "Staff" : "Cliente"));
       } else {
         setUserName(null);
-        setIsAdmin(false);
       }
     };
 
     checkAuth();
     window.addEventListener("storage", checkAuth);
     window.addEventListener("aimprimir3d_auth_changed", checkAuth);
+    window.addEventListener("focus", checkAuth);
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("storage", checkAuth);
       window.removeEventListener("aimprimir3d_auth_changed", checkAuth);
+      window.removeEventListener("focus", checkAuth);
     };
   }, []);
+
+  const handleLogout = () => {
+    logoutUser();
+    setUserName(null);
+    setIsAdmin(false);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <>
@@ -139,10 +148,27 @@ export default function Navbar() {
             )}
 
             {userName ? (
-              <Link href={isAdmin ? "/admin" : "/dashboard"} className={styles.accountBtn}>
-                <span className={styles.userIcon}>{isAdmin ? "🛠️" : "👤"}</span>
-                <span>{isAdmin ? "Panel Staff" : `Hola, ${userName}`}</span>
-              </Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link href={isAdmin ? "/admin" : "/dashboard"} className={styles.accountBtn}>
+                  <span className={styles.userIcon}>{isAdmin ? "🛠️" : "👤"}</span>
+                  <span>{isAdmin ? "Panel Staff" : `Hola, ${userName}`}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn btn-outline-dark"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    borderRadius: '980px',
+                    color: '#64748b',
+                    borderColor: '#cbd5e1',
+                  }}
+                  title="Cerrar Sesión"
+                >
+                  Salir 🚪
+                </button>
+              </div>
             ) : (
               <Link href="/auth/login" className={styles.accountBtn}>
                 <span className={styles.userIcon}>👤</span>
@@ -210,9 +236,19 @@ export default function Navbar() {
             )}
             <div className={styles.mobileMenuDivider}></div>
             {userName ? (
-              <Link href={isAdmin ? "/admin" : "/dashboard"} onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
-                {isAdmin ? "🛠️ Consola aImprimir3D" : `👤 Panel de ${userName}`}
-              </Link>
+              <>
+                <Link href={isAdmin ? "/admin" : "/dashboard"} onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
+                  {isAdmin ? "🛠️ Consola aImprimir3D" : `👤 Panel de ${userName}`}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className={styles.mobileNavItem}
+                  style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', color: '#ef4444', cursor: 'pointer' }}
+                >
+                  🚪 Cerrar Sesión
+                </button>
+              </>
             ) : (
               <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className={styles.mobileNavItem}>
                 👤 Iniciar Sesión / Registrarse
