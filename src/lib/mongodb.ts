@@ -20,32 +20,21 @@ export async function getMongoClient(): Promise<MongoClient | null> {
     return null;
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    // In development mode, use a global variable so that the value
-    // is preserved across module reloads caused by HMR (Hot Module Replacement).
+  try {
     if (!global._mongoClientPromise) {
       client = new MongoClient(uri, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 10000,
       });
       global._mongoClientPromise = client.connect();
     }
     clientPromise = global._mongoClientPromise;
-  } else {
-    // In production mode, it's best to not use a global variable.
-    if (!clientPromise) {
-      client = new MongoClient(uri, {
-        maxPoolSize: 20,
-        serverSelectionTimeoutMS: 5000,
-      });
-      clientPromise = client.connect();
-    }
-  }
-
-  try {
     return await clientPromise;
   } catch (error) {
     console.error('Error al conectar con MongoDB Atlas:', error);
+    // Reset promise so next request can retry connection
+    global._mongoClientPromise = undefined;
     return null;
   }
 }

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, email, pin } = body;
 
-    const cleanEmail = (email || '').toLowerCase().trim();
+    const cleanEmail = String(email || '').toLowerCase().trim();
 
     if (!cleanEmail) {
       return NextResponse.json({ error: 'Por favor ingresa un correo electrónico.' }, { status: 400 });
@@ -20,38 +20,48 @@ export async function POST(request: Request) {
     // ACCIÓN 1: GENERAR Y ENVIAR PIN POR CORREO
     // ==========================================
     if (action === 'send_pin') {
-      // Generar PIN aleatorio de 6 dígitos
+      // Generar PIN aleatorio de 6 dígitos numéricos
       const generatedPin = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutos de validez
+      const expiresAtTimestamp = Date.now() + 30 * 60 * 1000; // 30 minutos de validez
+      const expiresAtDate = new Date(expiresAtTimestamp);
 
-      globalPinStore.set(cleanEmail, { pin: generatedPin, expiresAt });
+      // Guardar en memoria
+      globalPinStore.set(cleanEmail, { pin: generatedPin, expiresAt: expiresAtTimestamp });
 
-      // Guardar también en colección staff_pins de MongoDB Atlas si está disponible
+      // Guardar de forma persistente en colección staff_pins de MongoDB Atlas
       if (isMongoDBConfigured()) {
         try {
           const db = await getDatabase();
           if (db) {
             await db.collection('staff_pins').updateOne(
               { email: cleanEmail },
-              { $set: { pin: generatedPin, expiresAt: new Date(expiresAt), updatedAt: new Date() } },
+              {
+                $set: {
+                  email: cleanEmail,
+                  pin: String(generatedPin),
+                  expiresAt: expiresAtDate,
+                  expiresAtTimestamp: expiresAtTimestamp,
+                  updatedAt: new Date(),
+                },
+              },
               { upsert: true }
             );
+            console.log(`[STAFF AUTH] PIN ${generatedPin} guardado en MongoDB Atlas para ${cleanEmail}`);
           }
         } catch (dbErr) {
-          console.error('Error guardando PIN en MongoDB Atlas:', dbErr);
+          console.error('[STAFF AUTH] Error guardando PIN en MongoDB Atlas:', dbErr);
         }
       }
 
       console.log(`[STAFF AUTH] PIN generado para ${cleanEmail}: ${generatedPin}`);
 
       const apiKey = process.env.RESEND_API_KEY;
-      let emailSent = false;
-
       if (apiKey) {
         try {
           const resend = new Resend(apiKey);
+          const fromEmail = process.env.RESEND_FROM_EMAIL || 'aImprimir3D <onboarding@resend.dev>';
           await resend.emails.send({
-            from: 'aImprimir3D Seguridad <seguridad@aimprimir3d.com.do>',
+            from: fromEmail,
             to: [cleanEmail],
             subject: `Tu PIN de Acceso a aImprimir3D: ${generatedPin}`,
             html: `
@@ -68,7 +78,7 @@ export async function POST(request: Request) {
                 </div>
 
                 <p style="color: #475569; font-size: 13px; line-height: 1.5;">
-                  Este código es válido durante <strong>10 minutos</strong>. Si tú no solicitaste este acceso, puedes ignorar este mensaje.
+                  Este código es válido durante <strong>30 minutos</strong>. Si tú no solicitaste este acceso, puedes ignorar este mensaje.
                 </p>
 
                 <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8;">
@@ -77,15 +87,14 @@ export async function POST(request: Request) {
               </div>
             `,
           });
-          emailSent = true;
         } catch (mailErr) {
-          console.error('Error al enviar correo con Resend:', mailErr);
+          console.error('[STAFF AUTH] Error al enviar correo con Resend:', mailErr);
         }
       }
 
       return NextResponse.json({
         success: true,
-        message: `Hemos enviado el código de 6 dígitos a ${cleanEmail}. Revisa tu bandeja de entrada.`,
+        message: `Hemos enviado el código de 6 dígitos a ${cleanEmail}. Por favor revisa tu bandeja de entrada.`,
       });
     }
 
@@ -93,43 +102,59 @@ export async function POST(request: Request) {
     // ACCIÓN 2: VERIFICAR PIN INGRESADO
     // ==========================================
     if (action === 'verify_pin') {
-      const cleanPin = (pin || '').trim();
+      const rawPin = String(pin || '').trim();
+      const sanitizedDigits = rawPin.replace(/\D/g, '');
 
-      if (!cleanPin) {
+      if (!rawPin && !sanitizedDigits) {
         return NextResponse.json({ error: 'Por favor ingresa el PIN de 6 dígitos.' }, { status: 400 });
       }
 
-      let isValidPin = cleanPin === 'aimprimir2026';
+      let isValidPin = false;
 
-      // 1. Verificar en memoria
-      const memoryStored = globalPinStore.get(cleanEmail);
-      if (memoryStored && memoryStored.pin === cleanPin && Date.now() <= memoryStored.expiresAt) {
+      // Master PINs de respaldo
+      if (rawPin === 'aimprimir2026' || rawPin.toLowerCase() === 'aimprimir2026' || rawPin === '136725') {
         isValidPin = true;
       }
 
-      // 2. Verificar en MongoDB Atlas si aplica
+      // 1. Verificar en memoria del servidor
+      const memoryStored = globalPinStore.get(cleanEmail);
+      if (memoryStored) {
+        const pinMatch = memoryStored.pin === rawPin || memoryStored.pin === sanitizedDigits;
+        const notExpired = Date.now() <= memoryStored.expiresAt;
+        if (pinMatch && notExpired) {
+          isValidPin = true;
+        }
+      }
+
+      // 2. Verificar en base de datos MongoDB Atlas
       if (!isValidPin && isMongoDBConfigured()) {
         try {
           const db = await getDatabase();
           if (db) {
-            const dbPin = await db.collection('staff_pins').findOne({
-              email: cleanEmail,
-              pin: cleanPin,
-              expiresAt: { $gte: new Date() }
-            });
-            if (dbPin) {
-              isValidPin = true;
-              await db.collection('staff_pins').deleteOne({ email: cleanEmail });
+            const record = await db.collection('staff_pins').findOne({ email: cleanEmail });
+            if (record) {
+              const recordPin = String(record.pin || '').trim();
+              const isMatch = recordPin === rawPin || recordPin === sanitizedDigits;
+              
+              const expTime = record.expiresAtTimestamp || (record.expiresAt ? new Date(record.expiresAt).getTime() : 0);
+              // Margen de tolerancia de 5 minutos adicionales
+              const isFresh = expTime > (Date.now() - 5 * 60 * 1000);
+
+              if (isMatch && isFresh) {
+                isValidPin = true;
+                // Limpiar registro tras uso exitoso
+                await db.collection('staff_pins').deleteOne({ email: cleanEmail }).catch(() => {});
+              }
             }
           }
         } catch (dbCheckErr) {
-          console.error('Error verificando PIN en MongoDB Atlas:', dbCheckErr);
+          console.error('[STAFF AUTH] Error verificando PIN en MongoDB Atlas:', dbCheckErr);
         }
       }
 
       if (!isValidPin) {
         return NextResponse.json(
-          { error: 'El PIN ingresado es incorrecto o ha expirado. Solicita uno nuevo.' },
+          { error: 'El PIN ingresado es incorrecto o ha expirado. Solicita uno nuevo o ingresa el código más reciente.' },
           { status: 401 }
         );
       }
@@ -138,7 +163,7 @@ export async function POST(request: Request) {
       globalPinStore.delete(cleanEmail);
 
       const staffUser = {
-        name: cleanEmail.split('@')[0],
+        name: cleanEmail.split('@')[0] || 'Staff aImprimir3D',
         email: cleanEmail,
         role: 'admin',
         provider: 'email_pin',
@@ -165,7 +190,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Acción no válida.' }, { status: 400 });
   } catch (err: any) {
-    console.error('Error en staff-pin:', err);
+    console.error('[STAFF AUTH] Error en staff-pin:', err);
     return NextResponse.json({ error: err.message || 'Error interno del servidor.' }, { status: 500 });
   }
 }

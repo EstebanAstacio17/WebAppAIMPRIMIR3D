@@ -99,7 +99,7 @@ export default function LoginPage() {
     setStaffError(null);
 
     const cleanEmail = staffEmail.trim().toLowerCase();
-    const cleanPin = staffPin.trim();
+    const cleanPin = staffPin.replace(/\s+/g, '').trim();
 
     if (!cleanPin || cleanPin.length < 4) {
       setStaffError('Por favor ingresa los 6 dígitos del PIN recibido.');
@@ -320,12 +320,12 @@ export default function LoginPage() {
                     className={styles.input}
                     placeholder="• • • • • •"
                     value={staffPin}
-                    maxLength={6}
-                    onChange={(e) => setStaffPin(e.target.value.replace(/[^0-9]/g, ''))}
+                    maxLength={20}
+                    onChange={(e) => setStaffPin(e.target.value)}
                     style={{
                       textAlign: 'center',
                       fontSize: '1.4rem',
-                      letterSpacing: '8px',
+                      letterSpacing: '6px',
                       fontWeight: 700,
                     }}
                     required
