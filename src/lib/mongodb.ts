@@ -1,8 +1,11 @@
 import { MongoClient, Db } from 'mongodb';
 
+const DEFAULT_ATLAS_URI =
+  'mongodb+srv://portaforza_db_user:uSF25ipWXsKQ3DAy@cluster0.2vqqcae.mongodb.net/aimprimir3d?retryWrites=true&w=majority&appName=Cluster0';
+
 function getUri(): string {
-  const raw = process.env.MONGODB_URI || '';
-  return raw.trim().replace(/^["']|["']$/g, '').trim();
+  const raw = process.env.MONGODB_URI || DEFAULT_ATLAS_URI;
+  return raw.trim().replace(/^["']|["']$/g, '').trim() || DEFAULT_ATLAS_URI;
 }
 
 function getDbName(): string {
@@ -10,12 +13,9 @@ function getDbName(): string {
   return raw.trim().replace(/^["']|["']$/g, '').trim() || 'aimprimir3d';
 }
 
-let client: MongoClient | null = null;
-let clientPromise: Promise<MongoClient> | null = null;
-
 declare global {
   // eslint-disable-next-line no-var
-  var _mongoClientPromise: Promise<MongoClient> | undefined;
+  var _mongoClientInstance: MongoClient | undefined;
 }
 
 export function isMongoDBConfigured(): boolean {
@@ -30,20 +30,19 @@ export async function getMongoClient(): Promise<MongoClient | null> {
   }
 
   try {
-    if (!global._mongoClientPromise) {
-      client = new MongoClient(uri, {
+    if (!global._mongoClientInstance) {
+      const client = new MongoClient(uri, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 10000,
       });
-      global._mongoClientPromise = client.connect();
+      await client.connect();
+      global._mongoClientInstance = client;
     }
-    clientPromise = global._mongoClientPromise;
-    return await clientPromise;
+    return global._mongoClientInstance;
   } catch (error) {
     console.error('Error al conectar con MongoDB Atlas:', error);
-    // Reset promise so next request can retry connection
-    global._mongoClientPromise = undefined;
+    global._mongoClientInstance = undefined;
     return null;
   }
 }
