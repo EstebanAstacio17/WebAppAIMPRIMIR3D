@@ -49,7 +49,6 @@ export function getStoredOrders(): Order[] {
     const data = localStorage.getItem(STORAGE_ORDERS_KEY);
     if (!data) {
       localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(initialMockOrders));
-      syncOrdersFromApi();
       return initialMockOrders;
     }
     const parsed = JSON.parse(data);
@@ -64,17 +63,30 @@ export async function syncOrdersFromApi(email?: string): Promise<Order[]> {
   if (typeof window === 'undefined') return initialMockOrders;
   try {
     const url = email ? `/api/orders?email=${encodeURIComponent(email)}` : '/api/orders';
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.orders) && data.orders.length > 0) {
-        localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
+      if (data.success && Array.isArray(data.orders)) {
+        if (!email) {
+          // If fetching all orders (Admin), store the master list
+          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
+        } else {
+          // Merge client orders into local store
+          const current = getStoredOrders();
+          const mergedMap = new Map<string, Order>();
+          data.orders.forEach((o: Order) => mergedMap.set(o.id, o));
+          current.forEach((o: Order) => {
+            if (!mergedMap.has(o.id)) mergedMap.set(o.id, o);
+          });
+          const mergedList = Array.from(mergedMap.values());
+          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(mergedList));
+        }
         window.dispatchEvent(new Event('aimprimir3d_orders_updated'));
         return data.orders;
       }
     }
   } catch (e) {
-    // Graceful fallback to cached orders
+    console.warn('Fallback a pedidos locales:', e);
   }
   return getStoredOrders();
 }
@@ -91,11 +103,11 @@ export function saveStoredOrders(orders: Order[]): void {
 }
 
 /**
- * Registra un nuevo pedido, deduce el inventario de existencias en almacén y notifica a la plataforma
+ * Registra un nuevo pedido, deduce el inventario de existencias en almacén y sincroniza con MongoDB Atlas
  */
-export function createNewOrder(order: Order): void {
+export async function createNewOrder(order: Order): Promise<boolean> {
   const currentOrders = getStoredOrders();
-  const updatedOrders = [order, ...currentOrders];
+  const updatedOrders = [order, ...currentOrders.filter((o) => o.id !== order.id)];
   
   // 1. Guardar pedido en caché local
   saveStoredOrders(updatedOrders);
@@ -105,18 +117,28 @@ export function createNewOrder(order: Order): void {
     deductProductStock(order.items);
   }
 
-  // 3. Sincronizar en segundo plano con MongoDB Atlas
-  fetch('/api/orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(order),
-  }).catch(() => {});
+  // 3. Sincronizar con MongoDB Atlas
+  try {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order),
+    });
+    if (res.ok) {
+      window.dispatchEvent(new Event('aimprimir3d_orders_updated'));
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Error enviando pedido a API:', err);
+    return false;
+  }
 }
 
 /**
  * Cancela un pedido del cliente y devuelve el stock a inventario
  */
-export function cancelOrderById(orderId: string): void {
+export async function cancelOrderById(orderId: string): Promise<boolean> {
   const currentOrders = getStoredOrders();
   let cancelledOrder: Order | undefined;
 
@@ -139,18 +161,29 @@ export function cancelOrderById(orderId: string): void {
     }
 
     // Sincronizar con MongoDB Atlas
-    fetch('/api/orders', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId, status: 'cancelled' }),
-    }).catch(() => {});
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: 'cancelled' }),
+      });
+      if (res.ok) {
+        window.dispatchEvent(new Event('aimprimir3d_orders_updated'));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Error cancelando pedido en API:', err);
+      return false;
+    }
   }
+  return false;
 }
 
 /**
  * Actualiza el estado o número de guía de un pedido y notifica en vivo a clientes y staff
  */
-export function updateOrderStatus(orderId: string, status: Order['status'], trackingNumber?: string): void {
+export async function updateOrderStatus(orderId: string, status: Order['status'], trackingNumber?: string): Promise<boolean> {
   const currentOrders = getStoredOrders();
   let previousOrder: Order | undefined;
 
@@ -176,9 +209,19 @@ export function updateOrderStatus(orderId: string, status: Order['status'], trac
   }
 
   // Sincronizar actualización con MongoDB Atlas
-  fetch('/api/orders', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orderId, status, trackingNumber }),
-  }).catch(() => {});
+  try {
+    const res = await fetch('/api/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, status, trackingNumber }),
+    });
+    if (res.ok) {
+      window.dispatchEvent(new Event('aimprimir3d_orders_updated'));
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Error actualizando estado en API:', err);
+    return false;
+  }
 }

@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
     if (!isMongoDBConfigured()) {
       let result = initialMockOrders;
       if (emailParam) {
-        result = result.filter(o => o.email.toLowerCase() === emailParam.toLowerCase());
+        const clean = emailParam.toLowerCase().trim();
+        result = result.filter(o => o.email && o.email.toLowerCase().trim() === clean);
       }
       return NextResponse.json({
         success: true,
@@ -22,21 +23,31 @@ export async function GET(req: NextRequest) {
 
     const db = await getDatabase();
     if (!db) {
+      let result = initialMockOrders;
+      if (emailParam) {
+        const clean = emailParam.toLowerCase().trim();
+        result = result.filter(o => o.email && o.email.toLowerCase().trim() === clean);
+      }
       return NextResponse.json({
         success: true,
         source: 'local_fallback',
-        orders: initialMockOrders,
+        orders: result,
       });
     }
 
     const collection = db.collection<Order>('orders');
-    let orders = await collection.find({}).sort({ date: -1 }).toArray();
-
-    // Auto-seed if database collection is empty
-    if (orders.length === 0) {
-      await collection.insertMany(initialMockOrders as any);
-      orders = await collection.find({}).toArray();
+    
+    // Auto-seed mock orders if collection has 0 orders
+    const count = await collection.countDocuments();
+    if (count === 0) {
+      try {
+        await collection.insertMany(initialMockOrders as any);
+      } catch (seedErr) {
+        console.error('Error auto-seeding orders:', seedErr);
+      }
     }
+
+    let orders = await collection.find({}).sort({ _id: -1 }).toArray();
 
     if (emailParam) {
       const cleanEmail = emailParam.toLowerCase().trim();
@@ -71,12 +82,19 @@ export async function POST(req: NextRequest) {
     if (isMongoDBConfigured()) {
       const db = await getDatabase();
       if (db) {
-        // 1. Insert order into orders collection
+        // 1. Upsert order into orders collection
         const ordersCol = db.collection('orders');
-        await ordersCol.insertOne({
-          ...orderPayload,
-          createdAt: new Date().toISOString(),
-        } as any);
+        await ordersCol.updateOne(
+          { id: orderPayload.id },
+          {
+            $set: {
+              ...orderPayload,
+              createdAt: orderPayload.date || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          },
+          { upsert: true }
+        );
 
         // 2. Atomic stock deduction for in_stock items
         if (orderPayload.items && orderPayload.items.length > 0) {

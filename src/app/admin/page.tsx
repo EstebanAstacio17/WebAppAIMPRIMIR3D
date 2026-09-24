@@ -8,8 +8,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './admin.module.css';
 import { Product, VolumeTier, Order } from '@/types/product';
-import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts } from '@/utils/productStorage';
-import { getStoredOrders, saveStoredOrders, createNewOrder, updateOrderStatus, initialMockOrders } from '@/utils/orderStorage';
+import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts, syncProductsFromApi } from '@/utils/productStorage';
+import { getStoredOrders, saveStoredOrders, createNewOrder, updateOrderStatus, initialMockOrders, syncOrdersFromApi } from '@/utils/orderStorage';
 import { getCurrentUser, isUserAdmin, logoutUser } from '@/utils/authRoles';
 
 function AdminContent() {
@@ -27,6 +27,7 @@ function AdminContent() {
   const [orderFilter, setOrderFilter] = useState<string>('all');
   const [orderSearch, setOrderSearch] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   // Products State
   const [products, setProducts] = useState<Product[]>([]);
@@ -53,7 +54,7 @@ function AdminContent() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const refreshAdminData = () => {
+  const refreshAdminData = async () => {
     // 1. Check if logged in user is admin
     const user = getCurrentUser();
     if (isUserAdmin(user)) {
@@ -65,15 +66,47 @@ function AdminContent() {
       }
     }
 
-    // 2. Load products
+    // 2. Load cached immediately
     setProducts(getStoredProducts());
-
-    // 3. Load orders
     setOrders(getStoredOrders());
+
+    // 3. Sync live from MongoDB Atlas in background
+    try {
+      const [liveOrders, liveProducts] = await Promise.all([
+        syncOrdersFromApi(),
+        syncProductsFromApi(),
+      ]);
+      if (liveOrders && Array.isArray(liveOrders)) {
+        setOrders(liveOrders);
+      }
+      if (liveProducts && Array.isArray(liveProducts)) {
+        setProducts(liveProducts);
+      }
+    } catch (err) {
+      console.warn('Error syncing admin live data:', err);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshAdminData();
+    setIsRefreshing(false);
+    showToast('🔄 Datos sincronizados con MongoDB Atlas');
   };
 
   useEffect(() => {
     refreshAdminData();
+
+    // Live polling every 5 seconds for real-time order and inventory sync
+    const pollInterval = setInterval(() => {
+      syncOrdersFromApi()
+        .then((liveOrders) => {
+          if (liveOrders && Array.isArray(liveOrders)) {
+            setOrders(liveOrders);
+          }
+        })
+        .catch(() => {});
+    }, 5000);
 
     // Event listeners for live synchronization across all components
     const handleOrdersSync = () => setOrders(getStoredOrders());
@@ -95,6 +128,7 @@ function AdminContent() {
     }
 
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('aimprimir3d_orders_updated', handleOrdersSync);
       window.removeEventListener('aimprimir3d_products_updated', handleProductsSync);
       window.removeEventListener('storage', refreshAdminData);
@@ -130,7 +164,7 @@ function AdminContent() {
     window.location.href = '/';
   };
 
-  const handleCreateTestOrder = () => {
+  const handleCreateTestOrder = async () => {
     const randomId = `AIM-${Math.floor(2000 + Math.random() * 8000)}`;
     const testOrder: Order = {
       id: randomId,
@@ -146,8 +180,8 @@ function AdminContent() {
       status: 'pending',
       date: 'Hoy',
     };
-    createNewOrder(testOrder);
-    refreshAdminData();
+    await createNewOrder(testOrder);
+    await refreshAdminData();
     showToast(`🎉 Pedido #${randomId} creado y stock descontado`);
   };
 
@@ -160,14 +194,18 @@ function AdminContent() {
   };
 
   // --- ORDER MANAGEMENT ---
-  const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    updateOrderStatus(orderId, newStatus);
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+    await updateOrderStatus(orderId, newStatus);
+    const updated = await syncOrdersFromApi();
+    setOrders(updated);
     showToast(`Estado de pedido #${orderId} actualizado a "${newStatus}"`);
   };
 
-  const handleSaveTracking = (orderId: string, tracking: string) => {
+  const handleSaveTracking = async (orderId: string, tracking: string) => {
     const currentOrder = orders.find((o) => o.id === orderId);
-    updateOrderStatus(orderId, currentOrder ? currentOrder.status : 'in_production', tracking);
+    await updateOrderStatus(orderId, currentOrder ? currentOrder.status : 'in_production', tracking);
+    const updated = await syncOrdersFromApi();
+    setOrders(updated);
     showToast(`Guía de envío #${tracking} guardada`);
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder({ ...selectedOrder, trackingNumber: tracking });
@@ -493,13 +531,25 @@ function AdminContent() {
               ))}
             </div>
 
-            <input
-              type="text"
-              placeholder="Buscar por #ID, cliente o email..."
-              value={orderSearch}
-              onChange={(e) => setOrderSearch(e.target.value)}
-              className={styles.searchInput}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Buscar por #ID, cliente o email..."
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                className={styles.searchInput}
+              />
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="btn btn-outline-dark"
+                title="Sincronizar con base de datos en la nube"
+                style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: '0.85rem' }}
+              >
+                {isRefreshing ? '⏳ Sincronizando...' : '🔄 Actualizar'}
+              </button>
+            </div>
           </div>
 
           {/* ORDERS TABLE */}

@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './dashboard.module.css';
 import { Order } from '@/types/product';
-import { getStoredOrders, cancelOrderById } from '@/utils/orderStorage';
+import { getStoredOrders, cancelOrderById, syncOrdersFromApi } from '@/utils/orderStorage';
 import { getCurrentUser, logoutUser } from '@/utils/authRoles';
 
 export default function DashboardPage() {
@@ -17,28 +17,66 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
 
-  const loadDashboardData = () => {
+  const loadDashboardData = async () => {
     const user = getCurrentUser();
     setCurrentUser(user);
 
-    const orders = getStoredOrders();
-    setAllOrders(orders);
+    const updateViewWithOrders = (ordersList: Order[]) => {
+      setAllOrders(ordersList);
+      if (user && user.email) {
+        const clientEmail = user.email.toLowerCase().trim();
+        const userOrders = ordersList.filter(
+          (o) =>
+            (o.email && o.email.toLowerCase().trim() === clientEmail) ||
+            (user.name && o.customer && o.customer.toLowerCase().includes(user.name.toLowerCase()))
+        );
+        setFilteredOrders(userOrders.length > 0 ? userOrders : ordersList);
+      } else {
+        setFilteredOrders(ordersList);
+      }
+    };
 
-    if (user && user.email) {
-      const clientEmail = user.email.toLowerCase().trim();
-      const userOrders = orders.filter(
-        (o) => (o.email && o.email.toLowerCase().trim() === clientEmail) || (user.name && o.customer.toLowerCase().includes(user.name.toLowerCase()))
-      );
-      // Si tiene pedidos propios los muestra; si no, muestra todos los pedidos recientes
-      setFilteredOrders(userOrders.length > 0 ? userOrders : orders);
-    } else {
-      setFilteredOrders(orders);
+    // 1. Initial cached view
+    const cachedOrders = getStoredOrders();
+    updateViewWithOrders(cachedOrders);
+
+    // 2. Live sync from MongoDB Atlas
+    try {
+      const liveOrders = await syncOrdersFromApi(user?.email);
+      if (liveOrders && Array.isArray(liveOrders)) {
+        updateViewWithOrders(liveOrders);
+      }
+    } catch (e) {
+      console.warn('Error fetching live client orders:', e);
     }
   };
 
   useEffect(() => {
     loadDashboardData();
     setLoading(false);
+
+    // Polling every 5 seconds for status changes made by Admin
+    const pollInterval = setInterval(() => {
+      const user = getCurrentUser();
+      syncOrdersFromApi(user?.email)
+        .then((liveOrders) => {
+          if (liveOrders && Array.isArray(liveOrders)) {
+            setAllOrders(liveOrders);
+            if (user && user.email) {
+              const clientEmail = user.email.toLowerCase().trim();
+              const userOrders = liveOrders.filter(
+                (o) =>
+                  (o.email && o.email.toLowerCase().trim() === clientEmail) ||
+                  (user.name && o.customer && o.customer.toLowerCase().includes(user.name.toLowerCase()))
+              );
+              setFilteredOrders(userOrders.length > 0 ? userOrders : liveOrders);
+            } else {
+              setFilteredOrders(liveOrders);
+            }
+          }
+        })
+        .catch(() => {});
+    }, 5000);
 
     const handleOrdersUpdated = () => {
       loadDashboardData();
@@ -49,16 +87,17 @@ export default function DashboardPage() {
     window.addEventListener('focus', handleOrdersUpdated);
 
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('aimprimir3d_orders_updated', handleOrdersUpdated);
       window.removeEventListener('storage', handleOrdersUpdated);
       window.removeEventListener('focus', handleOrdersUpdated);
     };
   }, []);
 
-  const handleCancelClientOrder = (orderId: string) => {
+  const handleCancelClientOrder = async (orderId: string) => {
     if (confirm(`¿Estás seguro de que deseas cancelar tu pedido #${orderId}?`)) {
-      cancelOrderById(orderId);
-      loadDashboardData();
+      await cancelOrderById(orderId);
+      await loadDashboardData();
     }
   };
 

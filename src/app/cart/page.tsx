@@ -31,7 +31,7 @@ export default function CartPage() {
 
   const hasOnDemandItems = items.some((it) => it.stockType === 'on_demand');
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) return;
 
@@ -64,13 +64,11 @@ export default function CartPage() {
     };
 
     // Crear pedido en almacén central y deducir existencias en almacén en tiempo real
-    createNewOrder(newOrder);
+    await createNewOrder(newOrder);
 
-    setTimeout(() => {
-      setLoading(false);
-      setSubmittedOrder(orderId);
-      clearCart();
-    }, 600);
+    setLoading(false);
+    setSubmittedOrder(orderId);
+    clearCart();
   };
 
   return (
