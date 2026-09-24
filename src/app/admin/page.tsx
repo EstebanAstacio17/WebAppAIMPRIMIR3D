@@ -156,6 +156,16 @@ function AdminContent() {
     setCustomerModalOpen(true);
   };
 
+  const openPromoteCustomerToStaff = (cust: CustomerUser) => {
+    setEditingStaff(null);
+    setFormStaffName(cust.name);
+    setFormStaffEmail(cust.email);
+    setFormStaffRole('operador');
+    setFormStaffDept('Taller de Impresión 3D');
+    setFormStaffActive(true);
+    setStaffModalOpen(true);
+  };
+
   const openEditCustomerModal = (cust: CustomerUser) => {
     setEditingCustomer(cust);
     setFormCustName(cust.name);
@@ -1539,12 +1549,21 @@ function AdminContent() {
                             {c.notes || '-'}
                           </td>
                           <td className={styles.td}>
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => openPromoteCustomerToStaff(c)}
+                                className="btn btn-outline-dark"
+                                style={{ padding: '6px 10px', fontSize: '0.78rem', color: '#0071e3', borderColor: '#bfdbfe', background: '#eff6ff' }}
+                                title="Promover o asignar permisos de staff / administración a este usuario"
+                              >
+                                👑 Dar Permisos Staff
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => openEditCustomerModal(c)}
                                 className="btn btn-outline-dark"
-                                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                style={{ padding: '6px 10px', fontSize: '0.8rem' }}
                               >
                                 ✏️ Editar
                               </button>
@@ -1552,7 +1571,7 @@ function AdminContent() {
                                 type="button"
                                 onClick={() => handleDeleteCustomer(c)}
                                 className="btn btn-outline-dark"
-                                style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
+                                style={{ padding: '6px 8px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
                                 title="Eliminar cliente"
                               >
                                 🗑️

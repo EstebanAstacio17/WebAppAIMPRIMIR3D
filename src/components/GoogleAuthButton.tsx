@@ -48,6 +48,31 @@ export default function GoogleAuthButton({
 
       if (typeof window !== 'undefined' && data.user) {
         localStorage.setItem('aimprimir3d_user', JSON.stringify(data.user));
+        const cleanEmail = (data.user.email || '').toLowerCase().trim();
+        const isAdmin =
+          data.user.role === 'admin' ||
+          cleanEmail === 'portaforza@gmail.com' ||
+          cleanEmail === 'info.aimprimir3d@gmail.com' ||
+          cleanEmail === 'admin@aimprimir3d.com' ||
+          cleanEmail === 'esteban@aimprimir3d.com' ||
+          cleanEmail.endsWith('@aimprimir3d.com');
+
+        if (isAdmin) {
+          sessionStorage.setItem('aimprimir3d_admin_auth', 'true');
+          localStorage.setItem('aimprimir3d_staff_session', 'true');
+        }
+        window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
+
+        if (onSuccess) {
+          onSuccess(data.user);
+        }
+
+        if (isAdmin) {
+          router.push('/admin');
+        } else {
+          router.push(redirectTo || '/dashboard');
+        }
+        return;
       }
 
       if (onSuccess) {
