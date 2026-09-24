@@ -68,3 +68,19 @@ export interface StaffMember {
   lastLogin?: string;
 }
 
+export interface CustomerUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  picture?: string;
+  provider?: string;
+  totalOrders?: number;
+  totalSpent?: number;
+  status: 'active' | 'suspended' | 'vip';
+  notes?: string;
+  createdAt: string;
+  lastActive?: string;
+}
+

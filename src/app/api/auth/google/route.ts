@@ -44,6 +44,38 @@ export async function POST(request: Request) {
       loggedInAt: new Date().toISOString(),
     };
 
+    // Registrar o actualizar cliente en MongoDB Atlas
+    try {
+      const { getDatabase, isMongoDBConfigured } = await import('@/lib/mongodb');
+      if (isMongoDBConfigured()) {
+        const db = await getDatabase();
+        if (db) {
+          await db.collection('customers').updateOne(
+            { email: userData.email },
+            {
+              $set: {
+                name: userData.name,
+                email: userData.email,
+                picture: userData.picture,
+                provider: 'google',
+                lastActive: new Date().toISOString(),
+              },
+              $setOnInsert: {
+                id: `cust-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                status: 'active',
+                createdAt: new Date().toISOString(),
+                totalOrders: 0,
+                totalSpent: 0,
+              },
+            },
+            { upsert: true }
+          );
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Error registrando cliente Google en DB:', dbErr);
+    }
+
     const response = NextResponse.json({
       success: true,
       user: userData,

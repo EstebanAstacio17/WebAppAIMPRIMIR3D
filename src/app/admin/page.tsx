@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './admin.module.css';
-import { Product, VolumeTier, Order, StaffMember } from '@/types/product';
+import { Product, VolumeTier, Order, StaffMember, CustomerUser } from '@/types/product';
 import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts, syncProductsFromApi } from '@/utils/productStorage';
 import { getStoredOrders, saveStoredOrders, createNewOrder, updateOrderStatus, initialMockOrders, syncOrdersFromApi } from '@/utils/orderStorage';
 import { getCurrentUser, isUserAdmin, logoutUser } from '@/utils/authRoles';
@@ -47,6 +47,9 @@ function AdminContent() {
   const [formTiers, setFormTiers] = useState<VolumeTier[]>([]);
   const [formPoliciesText, setFormPoliciesText] = useState('');
 
+  // User Management View Sub-Tab: 'staff' | 'customers'
+  const [userTab, setUserTab] = useState<'staff' | 'customers'>('staff');
+
   // Staff & Access Management State
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [staffSearch, setStaffSearch] = useState<string>('');
@@ -59,6 +62,20 @@ function AdminContent() {
   const [formStaffRole, setFormStaffRole] = useState<'admin' | 'supervisor' | 'operador'>('operador');
   const [formStaffDept, setFormStaffDept] = useState('Taller de Impresión 3D');
   const [formStaffActive, setFormStaffActive] = useState<boolean>(true);
+
+  // Customers Management State
+  const [customersList, setCustomersList] = useState<CustomerUser[]>([]);
+  const [customerSearch, setCustomerSearch] = useState<string>('');
+  const [customerModalOpen, setCustomerModalOpen] = useState<boolean>(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerUser | null>(null);
+
+  // Customer Form State
+  const [formCustName, setFormCustName] = useState('');
+  const [formCustEmail, setFormCustEmail] = useState('');
+  const [formCustPhone, setFormCustPhone] = useState('');
+  const [formCustAddress, setFormCustAddress] = useState('');
+  const [formCustStatus, setFormCustStatus] = useState<'active' | 'suspended' | 'vip'>('active');
+  const [formCustNotes, setFormCustNotes] = useState('');
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -98,6 +115,7 @@ function AdminContent() {
         setProducts(liveProducts);
       }
       fetchStaffMembers();
+      fetchCustomers();
     } catch (err) {
       console.warn('Error syncing admin live data:', err);
     }
@@ -112,6 +130,131 @@ function AdminContent() {
       }
     } catch (err) {
       console.warn('Error fetching staff members:', err);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await fetch('/api/customers');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.customers)) {
+        setCustomersList(data.customers);
+      }
+    } catch (err) {
+      console.warn('Error fetching customers:', err);
+    }
+  };
+
+  const openCreateCustomerModal = () => {
+    setEditingCustomer(null);
+    setFormCustName('');
+    setFormCustEmail('');
+    setFormCustPhone('');
+    setFormCustAddress('');
+    setFormCustStatus('active');
+    setFormCustNotes('');
+    setCustomerModalOpen(true);
+  };
+
+  const openEditCustomerModal = (cust: CustomerUser) => {
+    setEditingCustomer(cust);
+    setFormCustName(cust.name);
+    setFormCustEmail(cust.email);
+    setFormCustPhone(cust.phone || '');
+    setFormCustAddress(cust.address || '');
+    setFormCustStatus(cust.status || 'active');
+    setFormCustNotes(cust.notes || '');
+    setCustomerModalOpen(true);
+  };
+
+  const handleSaveCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formCustEmail.trim() || !formCustName.trim()) {
+      showToast('⚠️ Por favor completa el nombre y el correo.');
+      return;
+    }
+
+    try {
+      if (editingCustomer) {
+        const res = await fetch('/api/customers', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingCustomer.id,
+            email: formCustEmail.trim().toLowerCase(),
+            name: formCustName.trim(),
+            phone: formCustPhone.trim(),
+            address: formCustAddress.trim(),
+            status: formCustStatus,
+            notes: formCustNotes.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ Cliente ${formCustName} actualizado`);
+          fetchCustomers();
+          setCustomerModalOpen(false);
+        } else {
+          showToast(`❌ ${data.error || 'Error al actualizar'}`);
+        }
+      } else {
+        const res = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formCustName.trim(),
+            email: formCustEmail.trim().toLowerCase(),
+            phone: formCustPhone.trim(),
+            address: formCustAddress.trim(),
+            status: formCustStatus,
+            notes: formCustNotes.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🎉 Cliente ${formCustName} registrado exitosamente`);
+          fetchCustomers();
+          setCustomerModalOpen(false);
+        } else {
+          showToast(`❌ ${data.error || 'Error al registrar'}`);
+        }
+      }
+    } catch (err) {
+      showToast('❌ Error de conexión al guardar cliente');
+    }
+  };
+
+  const handleToggleCustomerStatus = async (cust: CustomerUser, newStatus: 'active' | 'suspended' | 'vip') => {
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: cust.id, email: cust.email, status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Estado de ${cust.name} cambiado a: ${newStatus.toUpperCase()}`);
+        fetchCustomers();
+      }
+    } catch (err) {
+      showToast('❌ Error al actualizar estado del cliente');
+    }
+  };
+
+  const handleDeleteCustomer = async (cust: CustomerUser) => {
+    if (confirm(`¿Estás seguro de que deseas eliminar el registro del cliente "${cust.name}"?`)) {
+      try {
+        const res = await fetch(`/api/customers?id=${encodeURIComponent(cust.id)}&email=${encodeURIComponent(cust.email)}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🗑️ Cliente ${cust.name} eliminado`);
+          fetchCustomers();
+        }
+      } catch (err) {
+        showToast('❌ Error al eliminar cliente');
+      }
     }
   };
 
@@ -623,7 +766,7 @@ function AdminContent() {
           onClick={() => setActiveTab('staff')}
           className={`${styles.mainNavTab} ${activeTab === 'staff' ? styles.mainNavTabActive : ''}`}
         >
-          👥 Personal & Accesos ({staffList.length})
+          👥 Personal & Clientes ({staffList.length + customersList.length})
         </button>
       </div>
 
@@ -938,219 +1081,491 @@ function AdminContent() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: STAFF & ACCESS CONTROL */}
+      {/* TAB 3: USER & STAFF MANAGEMENT (PERSONAL & CLIENTES) */}
       {/* ========================================================= */}
       {activeTab === 'staff' && (
         <div>
-          {/* SECURITY BANNER */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-              color: '#ffffff',
-              padding: '24px 28px',
-              borderRadius: '20px',
-              marginBottom: '28px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '16px',
-              boxShadow: '0 10px 25px rgba(15, 23, 42, 0.15)',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span style={{ background: '#0071e3', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Seguridad aImprimir3D
-                </span>
-                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Control de Acceso de Empleados</span>
-              </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '4px 0' }}>
-                Autorización de Personal y Operadores
-              </h3>
-              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', maxWidth: '650px', margin: 0 }}>
-                Solo los correos registrados y activos en este listado tienen autorización para solicitar y validar PINs de acceso para operar la plataforma administrativa.
-              </p>
-            </div>
-
+          {/* USER MANAGEMENT SUB-NAVIGATION */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', background: '#e2e8f0', padding: '6px', borderRadius: '16px', width: 'fit-content' }}>
             <button
               type="button"
-              onClick={openCreateStaffModal}
-              className="btn btn-primary"
-              style={{ padding: '12px 22px', fontSize: '0.92rem', background: '#0071e3', border: 'none', borderRadius: '12px', fontWeight: 600 }}
+              onClick={() => setUserTab('staff')}
+              style={{
+                padding: '9px 20px',
+                borderRadius: '12px',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                background: userTab === 'staff' ? '#0f172a' : 'transparent',
+                color: userTab === 'staff' ? '#ffffff' : '#64748b',
+                transition: 'all 0.2s ease',
+                boxShadow: userTab === 'staff' ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+              }}
             >
-              ➕ Autorizar Nuevo Empleado
+              🛠️ Personal & Empleados ({staffList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserTab('customers')}
+              style={{
+                padding: '9px 20px',
+                borderRadius: '12px',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                background: userTab === 'customers' ? '#0071e3' : 'transparent',
+                color: userTab === 'customers' ? '#ffffff' : '#64748b',
+                transition: 'all 0.2s ease',
+                boxShadow: userTab === 'customers' ? '0 4px 12px rgba(0,113,227,0.25)' : 'none',
+              }}
+            >
+              👤 Clientes Registrados ({customersList.length})
             </button>
           </div>
 
-          {/* KPI STATS */}
-          <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Personal Autorizado</span>
-              <span className={styles.statValue}>{staffList.length}</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Administradores</span>
-              <span className={styles.statValue} style={{ color: '#0071e3' }}>
-                {staffList.filter((s) => s.role === 'admin').length}
-              </span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Supervisores / Operadores</span>
-              <span className={styles.statValue} style={{ color: '#16a34a' }}>
-                {staffList.filter((s) => s.role !== 'admin').length}
-              </span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Accesos Activos</span>
-              <span className={styles.statValue} style={{ color: '#0f172a' }}>
-                {staffList.filter((s) => s.active).length} / {staffList.length}
-              </span>
-            </div>
-          </div>
+          {/* ========================================================= */}
+          {/* SUB-VIEW 1: STAFF & EMPLOYEES */}
+          {/* ========================================================= */}
+          {userTab === 'staff' && (
+            <div>
+              {/* SECURITY BANNER */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  color: '#ffffff',
+                  padding: '24px 28px',
+                  borderRadius: '20px',
+                  marginBottom: '28px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  boxShadow: '0 10px 25px rgba(15, 23, 42, 0.15)',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ background: '#0071e3', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Seguridad aImprimir3D
+                    </span>
+                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Control de Acceso de Empleados</span>
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '4px 0' }}>
+                    Autorización de Personal y Operadores
+                  </h3>
+                  <p style={{ fontSize: '0.88rem', color: '#cbd5e1', maxWidth: '650px', margin: 0 }}>
+                    Solo los correos registrados y activos en este listado tienen autorización para solicitar y validar PINs de acceso para operar la plataforma administrativa.
+                  </p>
+                </div>
 
-          {/* CONTROLS */}
-          <div className={styles.controlsBar}>
-            <input
-              type="text"
-              placeholder="Buscar por nombre, correo o departamento..."
-              value={staffSearch}
-              onChange={(e) => setStaffSearch(e.target.value)}
-              className={styles.searchInput}
-              style={{ maxWidth: '400px' }}
-            />
-          </div>
+                <button
+                  type="button"
+                  onClick={openCreateStaffModal}
+                  className="btn btn-primary"
+                  style={{ padding: '12px 22px', fontSize: '0.92rem', background: '#0071e3', border: 'none', borderRadius: '12px', fontWeight: 600 }}
+                >
+                  ➕ Autorizar Nuevo Empleado
+                </button>
+              </div>
 
-          {/* STAFF TABLE */}
-          <div className={styles.tableCard}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.th}>Empleado / Usuario</th>
-                  <th className={styles.th}>Correo Autorizado</th>
-                  <th className={styles.th}>Rol Asignado</th>
-                  <th className={styles.th}>Área / Departamento</th>
-                  <th className={styles.th}>Estado</th>
-                  <th className={styles.th}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffList
-                  .filter(
-                    (s) =>
-                      s.name.toLowerCase().includes(staffSearch.toLowerCase()) ||
-                      s.email.toLowerCase().includes(staffSearch.toLowerCase()) ||
-                      (s.department && s.department.toLowerCase().includes(staffSearch.toLowerCase()))
-                  )
-                  .map((s) => (
-                    <tr key={s.id || s.email} className={styles.tr}>
-                      <td className={styles.td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div
-                            style={{
-                              width: '36px',
-                              height: '36px',
-                              borderRadius: '50%',
-                              background: s.active ? '#eff6ff' : '#f1f5f9',
-                              color: s.active ? '#0071e3' : '#64748b',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              fontSize: '0.9rem',
-                            }}
-                          >
-                            {s.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <strong>{s.name}</strong>
-                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                              Registrado: {new Date(s.createdAt).toLocaleDateString('es-DO')}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className={styles.td}>
-                        <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.84rem' }}>
-                          {s.email}
-                        </code>
-                      </td>
-                      <td className={styles.td}>
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '20px',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            background:
-                              s.role === 'admin'
-                                ? '#dbeafe'
-                                : s.role === 'supervisor'
-                                ? '#fef3c7'
-                                : '#f1f5f9',
-                            color:
-                              s.role === 'admin'
-                                ? '#1d4ed8'
-                                : s.role === 'supervisor'
-                                ? '#b45309'
-                                : '#475569',
-                          }}
-                        >
-                          {s.role === 'admin' ? '👑 Admin' : s.role === 'supervisor' ? '⭐ Supervisor' : '🛠️ Operador'}
-                        </span>
-                      </td>
-                      <td className={styles.td} style={{ fontSize: '0.85rem', color: '#475569' }}>
-                        {s.department || 'Taller de Impresión 3D'}
-                      </td>
-                      <td className={styles.td}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStaffStatus(s)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '20px',
-                            border: 'none',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            background: s.active ? '#dcfce7' : '#fee2e2',
-                            color: s.active ? '#15803d' : '#b91c1c',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                          title={s.active ? 'Clic para suspender acceso' : 'Clic para habilitar acceso'}
-                        >
-                          {s.active ? '🟢 Activo' : '⛔ Suspendido'}
-                        </button>
-                      </td>
-                      <td className={styles.td}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => openEditStaffModal(s)}
-                            className="btn btn-outline-dark"
-                            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                          >
-                            ✏️ Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteStaff(s)}
-                            className="btn btn-outline-dark"
-                            style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
-                            title="Revocar acceso"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
+              {/* KPI STATS */}
+              <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Personal Autorizado</span>
+                  <span className={styles.statValue}>{staffList.length}</span>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Administradores</span>
+                  <span className={styles.statValue} style={{ color: '#0071e3' }}>
+                    {staffList.filter((s) => s.role === 'admin').length}
+                  </span>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Supervisores / Operadores</span>
+                  <span className={styles.statValue} style={{ color: '#16a34a' }}>
+                    {staffList.filter((s) => s.role !== 'admin').length}
+                  </span>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Accesos Activos</span>
+                  <span className={styles.statValue} style={{ color: '#0f172a' }}>
+                    {staffList.filter((s) => s.active).length} / {staffList.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* CONTROLS */}
+              <div className={styles.controlsBar}>
+                <input
+                  type="text"
+                  placeholder="Buscar empleado por nombre, correo o área..."
+                  value={staffSearch}
+                  onChange={(e) => setStaffSearch(e.target.value)}
+                  className={styles.searchInput}
+                  style={{ maxWidth: '400px' }}
+                />
+              </div>
+
+              {/* STAFF TABLE */}
+              <div className={styles.tableCard}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.th}>Empleado / Usuario</th>
+                      <th className={styles.th}>Correo Autorizado</th>
+                      <th className={styles.th}>Rol Asignado</th>
+                      <th className={styles.th}>Área / Departamento</th>
+                      <th className={styles.th}>Estado</th>
+                      <th className={styles.th}>Acciones</th>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {staffList
+                      .filter(
+                        (s) =>
+                          s.name.toLowerCase().includes(staffSearch.toLowerCase()) ||
+                          s.email.toLowerCase().includes(staffSearch.toLowerCase()) ||
+                          (s.department && s.department.toLowerCase().includes(staffSearch.toLowerCase()))
+                      )
+                      .map((s) => (
+                        <tr key={s.id || s.email} className={styles.tr}>
+                          <td className={styles.td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div
+                                style={{
+                                  width: '36px',
+                                  height: '36px',
+                                  borderRadius: '50%',
+                                  background: s.active ? '#eff6ff' : '#f1f5f9',
+                                  color: s.active ? '#0071e3' : '#64748b',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 700,
+                                  fontSize: '0.9rem',
+                                }}
+                              >
+                                {s.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <strong>{s.name}</strong>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                  Registrado: {new Date(s.createdAt).toLocaleDateString('es-DO')}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.84rem' }}>
+                              {s.email}
+                            </code>
+                          </td>
+                          <td className={styles.td}>
+                            <span
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                background:
+                                  s.role === 'admin'
+                                    ? '#dbeafe'
+                                    : s.role === 'supervisor'
+                                    ? '#fef3c7'
+                                    : '#f1f5f9',
+                                color:
+                                  s.role === 'admin'
+                                    ? '#1d4ed8'
+                                    : s.role === 'supervisor'
+                                    ? '#b45309'
+                                    : '#475569',
+                              }}
+                            >
+                              {s.role === 'admin' ? '👑 Admin' : s.role === 'supervisor' ? '⭐ Supervisor' : '🛠️ Operador'}
+                            </span>
+                          </td>
+                          <td className={styles.td} style={{ fontSize: '0.85rem', color: '#475569' }}>
+                            {s.department || 'Taller de Impresión 3D'}
+                          </td>
+                          <td className={styles.td}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStaffStatus(s)}
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                border: 'none',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                background: s.active ? '#dcfce7' : '#fee2e2',
+                                color: s.active ? '#15803d' : '#b91c1c',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title={s.active ? 'Clic para suspender acceso' : 'Clic para habilitar acceso'}
+                            >
+                              {s.active ? '🟢 Activo' : '⛔ Suspendido'}
+                            </button>
+                          </td>
+                          <td className={styles.td}>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => openEditStaffModal(s)}
+                                className="btn btn-outline-dark"
+                                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStaff(s)}
+                                className="btn btn-outline-dark"
+                                style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
+                                title="Revocar acceso"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* SUB-VIEW 2: REGISTERED CUSTOMERS (CRM) */}
+          {/* ========================================================= */}
+          {userTab === 'customers' && (
+            <div>
+              {/* CUSTOMERS CRM BANNER */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #0071e3 0%, #004bb5 100%)',
+                  color: '#ffffff',
+                  padding: '24px 28px',
+                  borderRadius: '20px',
+                  marginBottom: '28px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  boxShadow: '0 10px 25px rgba(0, 113, 227, 0.2)',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ background: '#ffffff', color: '#0071e3', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      CRM & Clientes
+                    </span>
+                    <span style={{ fontSize: '0.85rem', color: '#e0f2fe' }}>Directorio de Compradores</span>
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '4px 0' }}>
+                    Gestión y Control de Clientes
+                  </h3>
+                  <p style={{ fontSize: '0.88rem', color: '#f0f9ff', maxWidth: '650px', margin: 0 }}>
+                    Control de compradores registrados en la tienda, historial de pedidos, clientes VIP, teléfonos y direcciones de despacho.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openCreateCustomerModal}
+                  className="btn"
+                  style={{ padding: '12px 22px', fontSize: '0.92rem', background: '#ffffff', color: '#0071e3', border: 'none', borderRadius: '12px', fontWeight: 700 }}
+                >
+                  ➕ Registrar Nuevo Cliente
+                </button>
+              </div>
+
+              {/* KPI STATS */}
+              <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Clientes Registrados</span>
+                  <span className={styles.statValue}>{customersList.length}</span>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Clientes VIP / Preferenciales</span>
+                  <span className={styles.statValue} style={{ color: '#0071e3' }}>
+                    {customersList.filter((c) => c.status === 'vip').length}
+                  </span>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Facturación Acumulada</span>
+                  <span className={styles.statValue} style={{ color: '#16a34a' }}>
+                    RD${customersList.reduce((acc, c) => acc + (Number(c.totalSpent) || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statLabel}>Pedidos Realizados</span>
+                  <span className={styles.statValue} style={{ color: '#0f172a' }}>
+                    {customersList.reduce((acc, c) => acc + (Number(c.totalOrders) || 0), 0)}
+                  </span>
+                </div>
+              </div>
+
+              {/* CONTROLS */}
+              <div className={styles.controlsBar}>
+                <input
+                  type="text"
+                  placeholder="Buscar cliente por nombre, correo, teléfono o dirección..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className={styles.searchInput}
+                  style={{ maxWidth: '440px' }}
+                />
+              </div>
+
+              {/* CUSTOMERS TABLE */}
+              <div className={styles.tableCard}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.th}>Cliente / Registro</th>
+                      <th className={styles.th}>Contacto</th>
+                      <th className={styles.th}>Dirección de Entrega</th>
+                      <th className={styles.th}>Historial Compras</th>
+                      <th className={styles.th}>Categoría</th>
+                      <th className={styles.th}>Notas / CRM</th>
+                      <th className={styles.th}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customersList
+                      .filter(
+                        (c) =>
+                          c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                          c.email.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                          (c.phone && c.phone.includes(customerSearch)) ||
+                          (c.address && c.address.toLowerCase().includes(customerSearch.toLowerCase()))
+                      )
+                      .map((c) => (
+                        <tr key={c.id || c.email} className={styles.tr}>
+                          <td className={styles.td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div
+                                style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '50%',
+                                  background: c.status === 'vip' ? '#fef3c7' : '#eff6ff',
+                                  color: c.status === 'vip' ? '#b45309' : '#0071e3',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 700,
+                                  fontSize: '0.92rem',
+                                }}
+                              >
+                                {c.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <strong>{c.name}</strong>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                  Miembro desde: {new Date(c.createdAt).toLocaleDateString('es-DO')}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <div style={{ fontSize: '0.85rem' }}>
+                              <div>{c.email}</div>
+                              {c.phone && (
+                                <a
+                                  href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#16a34a', fontWeight: 600, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}
+                                >
+                                  💬 {c.phone}
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td className={styles.td} style={{ fontSize: '0.84rem', color: '#475569', maxWidth: '180px' }}>
+                            {c.address || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin registrar</span>}
+                          </td>
+                          <td className={styles.td}>
+                            <div>
+                              <strong style={{ color: '#0071e3' }}>{c.totalOrders || 0} pedidos</strong>
+                              <div style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+                                Total: RD${(c.totalSpent || 0).toLocaleString()}
+                              </div>
+                            </div>
+                          </td>
+                          <td className={styles.td}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCustomerStatus(c, c.status === 'vip' ? 'active' : c.status === 'active' ? 'vip' : 'active')}
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                border: 'none',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                background:
+                                  c.status === 'vip'
+                                    ? '#fef3c7'
+                                    : c.status === 'suspended'
+                                    ? '#fee2e2'
+                                    : '#dcfce7',
+                                color:
+                                  c.status === 'vip'
+                                    ? '#b45309'
+                                    : c.status === 'suspended'
+                                    ? '#b91c1c'
+                                    : '#15803d',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title="Clic para alternar categoría"
+                            >
+                              {c.status === 'vip' ? '⭐ VIP' : c.status === 'suspended' ? '⛔ Bloqueado' : '🟢 Activo'}
+                            </button>
+                          </td>
+                          <td className={styles.td} style={{ fontSize: '0.82rem', color: '#64748b', maxWidth: '180px' }}>
+                            {c.notes || '-'}
+                          </td>
+                          <td className={styles.td}>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => openEditCustomerModal(c)}
+                                className="btn btn-outline-dark"
+                                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCustomer(c)}
+                                className="btn btn-outline-dark"
+                                style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
+                                title="Eliminar cliente"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1563,6 +1978,114 @@ function AdminContent() {
                 <button
                   type="button"
                   onClick={() => setStaffModalOpen(false)}
+                  className="btn btn-outline-dark"
+                  style={{ padding: '12px 18px' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: ADD / EDIT CUSTOMER */}
+      {/* ========================================================= */}
+      {customerModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setCustomerModalOpen(false)}>
+          <div className={styles.modalBox} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>
+                {editingCustomer ? '✏️ Editar Información de Cliente' : '➕ Registrar Nuevo Cliente'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCustomerModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Nombre Completo / Razón Social</label>
+                <input
+                  type="text"
+                  value={formCustName}
+                  onChange={(e) => setFormCustName(e.target.value)}
+                  placeholder="Ej. Juan Pérez o Empresa XYZ"
+                  className={styles.input}
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Correo Electrónico</label>
+                <input
+                  type="email"
+                  value={formCustEmail}
+                  onChange={(e) => setFormCustEmail(e.target.value)}
+                  placeholder="cliente@ejemplo.com"
+                  className={styles.input}
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Teléfono / WhatsApp</label>
+                <input
+                  type="tel"
+                  value={formCustPhone}
+                  onChange={(e) => setFormCustPhone(e.target.value)}
+                  placeholder="809-555-0000"
+                  className={styles.input}
+                />
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Dirección de Entrega Predeterminada</label>
+                <input
+                  type="text"
+                  value={formCustAddress}
+                  onChange={(e) => setFormCustAddress(e.target.value)}
+                  placeholder="Ej. Av. 27 de Febrero, Torre Empresarial..."
+                  className={styles.input}
+                />
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Categoría / Estado del Cliente</label>
+                <select
+                  value={formCustStatus}
+                  onChange={(e) => setFormCustStatus(e.target.value as any)}
+                  className={styles.select}
+                >
+                  <option value="active">🟢 Activo (Cliente Regular)</option>
+                  <option value="vip">⭐ VIP / Preferencial (Descuentos y Atención Prioritaria)</option>
+                  <option value="suspended">⛔ Bloqueado / Suspendido</option>
+                </select>
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Notas Internas / CRM</label>
+                <textarea
+                  rows={2}
+                  value={formCustNotes}
+                  onChange={(e) => setFormCustNotes(e.target.value)}
+                  placeholder="Preferencias de materiales, historial de pagos, etc..."
+                  className={styles.textarea}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }}>
+                  💾 {editingCustomer ? 'Guardar Cambios' : 'Registrar Cliente'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerModalOpen(false)}
                   className="btn btn-outline-dark"
                   style={{ padding: '12px 18px' }}
                 >
