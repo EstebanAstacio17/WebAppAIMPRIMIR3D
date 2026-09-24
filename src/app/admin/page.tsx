@@ -493,24 +493,13 @@ function AdminContent() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={handleCreateTestOrder}
-                className="btn btn-outline-dark"
-                style={{ padding: '8px 14px', fontSize: '0.82rem' }}
-                title="Generar un pedido de prueba y comprobar el descuento de stock"
-              >
-                + Simular Pedido Cliente
-              </button>
-              <input
-                type="text"
-                placeholder="Buscar por #ID, cliente o email..."
-                value={orderSearch}
-                onChange={(e) => setOrderSearch(e.target.value)}
-                className={styles.searchInput}
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Buscar por #ID, cliente o email..."
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              className={styles.searchInput}
+            />
           </div>
 
           {/* ORDERS TABLE */}

@@ -85,10 +85,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: emailSent
-          ? `PIN enviado a ${cleanEmail}. Revisa tu bandeja de entrada.`
-          : `PIN generado exitosamente para ${cleanEmail}.`,
-        devPin: generatedPin,
+        message: `Hemos enviado el código de 6 dígitos a ${cleanEmail}. Revisa tu bandeja de entrada.`,
       });
     }
 

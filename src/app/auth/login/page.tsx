@@ -85,11 +85,7 @@ export default function LoginPage() {
       }
 
       setPinSent(true);
-      setStaffFeedback(
-        data.devPin
-          ? `✓ PIN enviado. (Código para prueba local: ${data.devPin})`
-          : `✓ Hemos enviado el código de 6 dígitos a ${cleanEmail}.`
-      );
+      setStaffFeedback(`✓ Hemos enviado un código de 6 dígitos a ${cleanEmail}. Por favor revisa tu bandeja de entrada.`);
     } catch (err: any) {
       setStaffError(err.message || 'Error al generar el PIN.');
     } finally {
