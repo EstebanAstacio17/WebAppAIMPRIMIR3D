@@ -6,6 +6,8 @@ const ADMIN_EMAILS = [
   'esteban@aimprimir3d.com',
   'aimprimir3d@gmail.com',
   'staff@aimprimir3d.com',
+  'portaforza@gmail.com',
+  'portaforzard@gmail.com',
 ];
 
 export function isUserAdmin(user?: Partial<AppUser> | null): boolean {
