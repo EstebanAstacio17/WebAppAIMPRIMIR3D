@@ -60,9 +60,11 @@ function AdminContent() {
     if (isUserAdmin(user)) {
       setIsAdminLoggedIn(true);
     } else {
-      const auth = sessionStorage.getItem('aimprimir3d_admin_auth');
+      const auth = typeof window !== 'undefined' ? sessionStorage.getItem('aimprimir3d_admin_auth') : null;
       if (auth === 'true') {
         setIsAdminLoggedIn(true);
+      } else {
+        setIsAdminLoggedIn(false);
       }
     }
 
@@ -114,6 +116,7 @@ function AdminContent() {
 
     window.addEventListener('aimprimir3d_orders_updated', handleOrdersSync);
     window.addEventListener('aimprimir3d_products_updated', handleProductsSync);
+    window.addEventListener('aimprimir3d_auth_changed', refreshAdminData);
     window.addEventListener('storage', refreshAdminData);
     window.addEventListener('focus', refreshAdminData);
 
@@ -131,6 +134,7 @@ function AdminContent() {
       clearInterval(pollInterval);
       window.removeEventListener('aimprimir3d_orders_updated', handleOrdersSync);
       window.removeEventListener('aimprimir3d_products_updated', handleProductsSync);
+      window.removeEventListener('aimprimir3d_auth_changed', refreshAdminData);
       window.removeEventListener('storage', refreshAdminData);
       window.removeEventListener('focus', refreshAdminData);
     };
@@ -161,7 +165,7 @@ function AdminContent() {
     logoutUser();
     setIsAdminLoggedIn(false);
     showToast('Sesión de staff cerrada');
-    window.location.href = '/';
+    window.location.href = '/auth/login';
   };
 
   const handleCreateTestOrder = async () => {

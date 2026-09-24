@@ -50,6 +50,13 @@ export default function Navbar() {
     setUserName(null);
     setIsAdmin(false);
     setMobileMenuOpen(false);
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/auth/login';
+      } else {
+        window.location.href = '/';
+      }
+    }
   };
 
   return (
