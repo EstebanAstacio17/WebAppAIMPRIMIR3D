@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
+import { getDatabase, isMongoDBConfigured, getLastMongoError } from '@/lib/mongodb';
 import { Order } from '@/types/product';
 import { initialMockOrders } from '@/utils/orderStorage';
 
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         source: 'local_fallback',
+        dbError: getLastMongoError(),
         orders: result,
       });
     }
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         source: 'local_fallback',
+        dbError: getLastMongoError(),
         orders: result,
       });
     }

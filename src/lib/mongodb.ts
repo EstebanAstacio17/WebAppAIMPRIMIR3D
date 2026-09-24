@@ -16,6 +16,12 @@ function getDbName(): string {
 declare global {
   // eslint-disable-next-line no-var
   var _mongoClientInstance: MongoClient | undefined;
+  // eslint-disable-next-line no-var
+  var _lastMongoError: string | undefined;
+}
+
+export function getLastMongoError(): string | undefined {
+  return global._lastMongoError;
 }
 
 export function isMongoDBConfigured(): boolean {
@@ -26,22 +32,24 @@ export function isMongoDBConfigured(): boolean {
 export async function getMongoClient(): Promise<MongoClient | null> {
   const uri = getUri();
   if (!uri || !uri.startsWith('mongodb')) {
+    global._lastMongoError = `Invalid URI prefix: ${uri ? uri.substring(0, 15) : 'EMPTY'}`;
     return null;
   }
 
   try {
     if (!global._mongoClientInstance) {
       const client = new MongoClient(uri, {
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 8000,
         connectTimeoutMS: 10000,
       });
       await client.connect();
       global._mongoClientInstance = client;
+      global._lastMongoError = undefined;
     }
     return global._mongoClientInstance;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al conectar con MongoDB Atlas:', error);
+    global._lastMongoError = error.message || String(error);
     global._mongoClientInstance = undefined;
     return null;
   }
