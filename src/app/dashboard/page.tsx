@@ -7,10 +7,10 @@ import Footer from '@/components/Footer';
 import styles from './dashboard.module.css';
 import { Order } from '@/types/product';
 import { getStoredOrders, cancelOrderById, syncOrdersFromApi } from '@/utils/orderStorage';
-import { getCurrentUser, logoutUser } from '@/utils/authRoles';
+import { getCurrentUser, logoutUser, isUserAdmin } from '@/utils/authRoles';
 
 export default function DashboardPage() {
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -154,15 +154,12 @@ export default function DashboardPage() {
               Rastreo de Pedidos
             </h2>
             <p style={{ color: '#86868b', fontSize: '0.95rem', marginTop: '8px', marginBottom: '28px', lineHeight: 1.5 }}>
-              Para ver el estado de fabricación en tiempo real y el historial de tus pedidos, por favor inicia sesión o crea una cuenta.
+              Para ver el estado de fabricación en tiempo real y el historial de tus pedidos, por favor inicia sesión con Google.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <Link href="/auth/login" className="btn btn-primary" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }}>
-                Iniciar Sesión
-              </Link>
-              <Link href="/auth/register" className="btn btn-outline-dark" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }}>
-                Crear Cuenta Gratis
+                Iniciar Sesión con Google
               </Link>
             </div>
 
@@ -178,27 +175,89 @@ export default function DashboardPage() {
     );
   }
 
-  // 2. LOGGED IN CLIENT DASHBOARD
+  const isAdmin = isUserAdmin(currentUser);
+
+  // 2. LOGGED IN CLIENT / ADMIN DASHBOARD
   return (
     <>
       <Navbar />
 
       <main className={`container ${styles.dashboardContainer}`}>
+        {/* ADMIN NOTIFICATION BANNER */}
+        {isAdmin && (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              border: '1.5px solid #38bdf8',
+              borderRadius: '20px',
+              padding: '18px 24px',
+              marginBottom: '28px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px',
+              boxShadow: '0 8px 30px rgba(56, 189, 248, 0.15)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#f8fafc' }}>
+              <span style={{ fontSize: '2rem' }}>👑</span>
+              <div>
+                <strong style={{ color: '#38bdf8', fontSize: '1.05rem', display: 'block' }}>
+                  Sesión de Administrador / Personal Activa ({currentUser.email})
+                </strong>
+                <span style={{ fontSize: '0.86rem', color: '#94a3b8' }}>
+                  Tienes permisos para gestionar inventario, cambiar estados de producción y administrar usuarios.
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/admin"
+              className="btn btn-primary"
+              style={{
+                padding: '10px 22px',
+                fontSize: '0.9rem',
+                background: '#38bdf8',
+                color: '#0f172a',
+                fontWeight: 700,
+              }}
+            >
+              ⚙️ Abrir Consola de Administración →
+            </Link>
+          </div>
+        )}
+
         <div className={styles.dashboardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className={styles.title}>Mis Encargos & Rastreo</h1>
+            <h1 className={styles.title}>
+              {isAdmin ? 'Panel de Control & Encargos' : 'Mis Encargos & Rastreo'}
+            </h1>
             <p className={styles.subtitle}>
-              Bienvenido, <strong>{currentUser.name}</strong> ({currentUser.email}). Aquí puedes ver el estado en tiempo real de tus piezas.
+              Bienvenido, <strong>{currentUser.name}</strong> ({currentUser.email}).
+              {isAdmin ? (
+                <span style={{ color: '#0284c7', fontWeight: 600, marginLeft: '6px' }}>
+                  (Rol: Administrador aImprimir3D 👑)
+                </span>
+              ) : (
+                <span> Aquí puedes ver el estado en tiempo real de tus piezas.</span>
+              )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="btn btn-outline-dark"
-            style={{ padding: '8px 18px', fontSize: '0.85rem' }}
-          >
-            Cerrar Sesión
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {isAdmin && (
+              <Link href="/admin" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+                ⚙️ Consola Admin
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn btn-outline-dark"
+              style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+            >
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
 
         {/* CLIENT SEARCH / TRACKER BAR */}

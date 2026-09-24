@@ -83,6 +83,31 @@ export async function POST(request: Request) {
                 },
               }
             );
+          } else if (isStaff) {
+            // Es Super Admin por whitelist (ej. portaforza@gmail.com): asegurar en staff_users
+            await db.collection('staff_users').updateOne(
+              { email: cleanEmail },
+              {
+                $set: {
+                  google_id: googleSubId,
+                  name: staffName,
+                  email: cleanEmail,
+                  role: 'admin',
+                  active: true,
+                  picture: payload.picture || '',
+                  lastLogin: new Date().toISOString(),
+                  department: 'Dirección General & Producción',
+                },
+                $setOnInsert: {
+                  id: `staff-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                  createdAt: new Date().toISOString(),
+                },
+              },
+              { upsert: true }
+            );
+
+            // Eliminar de customers para que no aparezca duplicado como cliente
+            await db.collection('customers').deleteOne({ email: cleanEmail });
           }
         }
       } catch (dbErr) {

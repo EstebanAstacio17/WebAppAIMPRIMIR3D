@@ -51,7 +51,10 @@ export default function GoogleAuthButton({
         const cleanEmail = (data.user.email || '').toLowerCase().trim();
         const isAdmin =
           data.user.role === 'admin' ||
+          data.user.role === 'supervisor' ||
+          data.user.role === 'operador' ||
           cleanEmail === 'portaforza@gmail.com' ||
+          cleanEmail === 'portaforzard@gmail.com' ||
           cleanEmail === 'info.aimprimir3d@gmail.com' ||
           cleanEmail === 'admin@aimprimir3d.com' ||
           cleanEmail === 'esteban@aimprimir3d.com' ||
@@ -68,9 +71,9 @@ export default function GoogleAuthButton({
         }
 
         if (isAdmin) {
-          router.push('/admin');
+          window.location.href = '/admin';
         } else {
-          router.push(redirectTo || '/dashboard');
+          window.location.href = redirectTo || '/dashboard';
         }
         return;
       }

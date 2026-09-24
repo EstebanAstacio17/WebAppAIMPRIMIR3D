@@ -42,17 +42,38 @@ export async function GET(request: Request) {
     if (isMongoDBConfigured()) {
       const db = await getDatabase();
       if (db) {
-        const [dbCustomers, dbOrders] = await Promise.all([
+        const [dbCustomers, dbOrders, dbStaff] = await Promise.all([
           db.collection('customers').find().toArray(),
           db.collection('orders').find().toArray(),
+          db.collection('staff_users').find().toArray(),
         ]);
+
+        const ADMIN_EMAILS = [
+          'info.aimprimir3d@gmail.com',
+          'admin@aimprimir3d.com',
+          'esteban@aimprimir3d.com',
+          'aimprimir3d@gmail.com',
+          'staff@aimprimir3d.com',
+          'portaforza@gmail.com',
+          'portaforzard@gmail.com',
+        ];
+
+        const staffEmailsSet = new Set<string>([
+          ...ADMIN_EMAILS,
+          ...dbStaff.map((s: any) => String(s.email || '').toLowerCase().trim()),
+        ]);
+
+        const isStaffEmail = (email: string) => {
+          const clean = email.toLowerCase().trim();
+          return staffEmailsSet.has(clean) || clean.endsWith('@aimprimir3d.com') || clean.endsWith('@aimprimir3d.com.do');
+        };
 
         const customerMap = new Map<string, any>();
 
-        // 1. Cargar clientes existentes en DB
+        // 1. Cargar clientes existentes en DB (excluyendo personal de aImprimir3D)
         for (const c of dbCustomers) {
           const email = String(c.email || '').toLowerCase().trim();
-          if (email) {
+          if (email && !isStaffEmail(email)) {
             customerMap.set(email, {
               id: c.id || c._id?.toString() || `cust-${Date.now()}`,
               name: c.name || email.split('@')[0],
@@ -71,11 +92,11 @@ export async function GET(request: Request) {
           }
         }
 
-        // 2. Auto-descubrir clientes desde la colección de pedidos
+        // 2. Auto-descubrir clientes desde la colección de pedidos (excluyendo personal)
         if (Array.isArray(dbOrders)) {
           for (const o of dbOrders) {
             const email = String(o.email || '').toLowerCase().trim();
-            if (email) {
+            if (email && !isStaffEmail(email)) {
               let cust = customerMap.get(email);
               if (!cust) {
                 cust = {
