@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 import styles from './admin.module.css';
 import { Product, VolumeTier, Order, StaffMember, CustomerUser } from '@/types/product';
 import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts, syncProductsFromApi } from '@/utils/productStorage';
@@ -667,33 +668,23 @@ function AdminContent() {
             Panel de aImprimir3D
           </h1>
           <p style={{ color: '#64748b', fontSize: '0.92rem', marginTop: '6px', marginBottom: '24px' }}>
-            Acceso exclusivo para el equipo de gestión, logística y catálogo de aImprimir3D.
+            Acceso exclusivo para el personal y administradores de aImprimir3D. Inicia sesión con tu cuenta de Google autorizada.
           </p>
 
-          <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <input
-              type="password"
-              placeholder="Ingresa el PIN o contraseña de staff..."
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              style={{
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: '1px solid #cbd5e1',
-                fontSize: '0.95rem',
-                textAlign: 'center',
-                outline: 'none',
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <GoogleAuthButton
+              text="continue_with"
+              redirectTo="/admin"
+              onSuccess={(user) => {
+                if (isUserAdmin(user)) {
+                  setIsAdminLoggedIn(true);
+                  showToast('🔓 Acceso concedido al panel');
+                } else {
+                  showToast('⚠️ Tu cuenta de Google no tiene permisos de administrador');
+                }
               }}
-              required
-              autoFocus
             />
-
-            {adminError && <div style={{ color: '#ef4444', fontSize: '0.85rem' }}>{adminError}</div>}
-
-            <button type="submit" className="btn btn-primary" style={{ padding: '13px' }}>
-              Ingresar al Panel
-            </button>
-          </form>
+          </div>
 
           <div style={{ marginTop: '20px' }}>
             <Link href="/" style={{ color: '#86868b', fontSize: '0.85rem' }}>

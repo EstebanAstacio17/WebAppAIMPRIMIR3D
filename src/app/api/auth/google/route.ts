@@ -1,8 +1,19 @@
 import { NextResponse } from 'next/server';
 import { OAuth2Client } from 'google-auth-library';
+import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '';
 const client = new OAuth2Client(googleClientId);
+
+const ADMIN_EMAILS = [
+  'info.aimprimir3d@gmail.com',
+  'admin@aimprimir3d.com',
+  'esteban@aimprimir3d.com',
+  'aimprimir3d@gmail.com',
+  'staff@aimprimir3d.com',
+  'portaforza@gmail.com',
+  'portaforzard@gmail.com',
+];
 
 export async function POST(request: Request) {
   try {
@@ -34,28 +45,66 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Token inválido o sin información de correo.' }, { status: 401 });
     }
 
+    const cleanEmail = payload.email.toLowerCase().trim();
+
+    // 1. Determinar si el correo pertenece al Personal / Administradores de aImprimir3D
+    let isStaff =
+      ADMIN_EMAILS.includes(cleanEmail) ||
+      cleanEmail.endsWith('@aimprimir3d.com') ||
+      cleanEmail.endsWith('@aimprimir3d.com.do');
+
+    let staffRole = 'admin';
+    let staffName = payload.name || cleanEmail.split('@')[0];
+
+    if (isMongoDBConfigured()) {
+      try {
+        const db = await getDatabase();
+        if (db) {
+          const staffDoc = await db.collection('staff_users').findOne({
+            email: cleanEmail,
+            active: { $ne: false },
+          });
+
+          if (staffDoc) {
+            isStaff = true;
+            staffRole = staffDoc.role || 'admin';
+            if (staffDoc.name) staffName = staffDoc.name;
+
+            // Actualizar último inicio de sesión del empleado
+            await db.collection('staff_users').updateOne(
+              { email: cleanEmail },
+              { $set: { lastLogin: new Date().toISOString(), picture: payload.picture || '' } }
+            );
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Error verificando staff en DB:', dbErr);
+      }
+    }
+
+    // 2. Construir objeto de usuario autenticado
     const userData = {
       id: payload.sub,
-      name: payload.name || payload.email.split('@')[0],
-      email: payload.email.toLowerCase().trim(),
+      name: staffName,
+      email: cleanEmail,
       picture: payload.picture || '',
       emailVerified: payload.email_verified || false,
       provider: 'google',
+      role: isStaff ? staffRole : 'client',
       loggedInAt: new Date().toISOString(),
     };
 
-    // Registrar o actualizar cliente en MongoDB Atlas
-    try {
-      const { getDatabase, isMongoDBConfigured } = await import('@/lib/mongodb');
-      if (isMongoDBConfigured()) {
+    // 3. Si es cliente, registrar o actualizar su ficha en el CRM de clientes
+    if (!isStaff && isMongoDBConfigured()) {
+      try {
         const db = await getDatabase();
         if (db) {
           await db.collection('customers').updateOne(
-            { email: userData.email },
+            { email: cleanEmail },
             {
               $set: {
                 name: userData.name,
-                email: userData.email,
+                email: cleanEmail,
                 picture: userData.picture,
                 provider: 'google',
                 lastActive: new Date().toISOString(),
@@ -71,32 +120,48 @@ export async function POST(request: Request) {
             { upsert: true }
           );
         }
+      } catch (custErr) {
+        console.warn('Error registrando cliente en DB:', custErr);
       }
-    } catch (dbErr) {
-      console.warn('Error registrando cliente Google en DB:', dbErr);
     }
+
+    const redirectUrl = isStaff ? '/admin' : '/dashboard';
 
     const response = NextResponse.json({
       success: true,
       user: userData,
-      message: 'Autenticación con Google exitosa.',
+      isAdmin: isStaff,
+      redirectUrl,
+      message: isStaff
+        ? `🔓 Acceso concedido al panel de administración (${userData.name}).`
+        : `Bienvenido a aImprimir3D, ${userData.name}.`,
     });
 
-    // Guardar cookie de sesión segura HTTP-Only
+    // 4. Guardar cookies de sesión
     response.cookies.set('auth_session', JSON.stringify(userData), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+      maxAge: 60 * 60 * 24 * 7,
     });
+
+    if (isStaff) {
+      response.cookies.set('aimprimir3d_staff_session', JSON.stringify(userData), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
 
     return response;
   } catch (error: any) {
     console.error('Error al verificar token de Google:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Error durante la verificación del token con Google.',
+        error: error.message || 'Error durante la verificación con Google.',
       },
       { status: 401 }
     );
