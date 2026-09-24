@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
-import StaffAdminBar from "@/components/StaffAdminBar";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -42,7 +41,6 @@ export default function RootLayout({
     <html lang="es" className={poppins.variable}>
       <body>
         <CartProvider>
-          <StaffAdminBar />
           <main>{children}</main>
         </CartProvider>
       </body>
