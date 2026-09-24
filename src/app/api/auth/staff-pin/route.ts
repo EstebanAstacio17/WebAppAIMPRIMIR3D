@@ -20,6 +20,50 @@ export async function POST(request: Request) {
     // ACCIÓN 1: GENERAR Y ENVIAR PIN POR CORREO
     // ==========================================
     if (action === 'send_pin') {
+      // 1. VALIDACIÓN ESTRICTA DE AUTORIZACIÓN PARA PERSONAL AIMPRIMIR3D
+      const DEFAULT_ALLOWED = [
+        'portaforza@gmail.com',
+        'portaforzard@gmail.com',
+        'info.aimprimir3d@gmail.com',
+        'admin@aimprimir3d.com',
+        'esteban@aimprimir3d.com',
+        'staff@aimprimir3d.com',
+        'aimprimir3d@gmail.com',
+      ];
+
+      let isAuthorizedStaff =
+        DEFAULT_ALLOWED.includes(cleanEmail) ||
+        cleanEmail.endsWith('@aimprimir3d.com') ||
+        cleanEmail.endsWith('@aimprimir3d.com.do');
+
+      // Consultar lista de personal dinámico en MongoDB Atlas
+      if (!isAuthorizedStaff && isMongoDBConfigured()) {
+        try {
+          const db = await getDatabase();
+          if (db) {
+            const staffDoc = await db.collection('staff_users').findOne({
+              email: cleanEmail,
+              active: { $ne: false },
+            });
+            if (staffDoc) {
+              isAuthorizedStaff = true;
+            }
+          }
+        } catch (authErr) {
+          console.error('[STAFF AUTH] Error verificando autorización:', authErr);
+        }
+      }
+
+      if (!isAuthorizedStaff) {
+        return NextResponse.json(
+          {
+            error:
+              'Acceso denegado: Este correo no está registrado como personal autorizado de aImprimir3D. Contacta al administrador para solicitar acceso.',
+          },
+          { status: 403 }
+        );
+      }
+
       // Generar PIN aleatorio de 6 dígitos numéricos
       const generatedPin = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAtTimestamp = Date.now() + 2 * 60 * 60 * 1000; // 2 horas de validez para evitar problemas de zona horaria

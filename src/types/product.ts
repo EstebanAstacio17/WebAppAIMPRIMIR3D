@@ -56,3 +56,15 @@ export interface AppUser {
   picture?: string;
   loggedInAt: string;
 }
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'supervisor' | 'operador';
+  department?: string;
+  active: boolean;
+  createdAt: string;
+  lastLogin?: string;
+}
+

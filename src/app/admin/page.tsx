@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import styles from './admin.module.css';
-import { Product, VolumeTier, Order } from '@/types/product';
+import { Product, VolumeTier, Order, StaffMember } from '@/types/product';
 import { getStoredProducts, saveStoredProducts, updateProductStockDirect, initialMockProducts, syncProductsFromApi } from '@/utils/productStorage';
 import { getStoredOrders, saveStoredOrders, createNewOrder, updateOrderStatus, initialMockOrders, syncOrdersFromApi } from '@/utils/orderStorage';
 import { getCurrentUser, isUserAdmin, logoutUser } from '@/utils/authRoles';
@@ -20,7 +20,7 @@ function AdminContent() {
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [adminError, setAdminError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'catalog'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'staff'>('orders');
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -46,6 +46,19 @@ function AdminContent() {
   const [formStockQty, setFormStockQty] = useState<number>(10);
   const [formTiers, setFormTiers] = useState<VolumeTier[]>([]);
   const [formPoliciesText, setFormPoliciesText] = useState('');
+
+  // Staff & Access Management State
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [staffSearch, setStaffSearch] = useState<string>('');
+  const [staffModalOpen, setStaffModalOpen] = useState<boolean>(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+
+  // Staff Form State
+  const [formStaffName, setFormStaffName] = useState('');
+  const [formStaffEmail, setFormStaffEmail] = useState('');
+  const [formStaffRole, setFormStaffRole] = useState<'admin' | 'supervisor' | 'operador'>('operador');
+  const [formStaffDept, setFormStaffDept] = useState('Taller de Impresión 3D');
+  const [formStaffActive, setFormStaffActive] = useState<boolean>(true);
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -84,8 +97,130 @@ function AdminContent() {
       if (liveProducts && Array.isArray(liveProducts)) {
         setProducts(liveProducts);
       }
+      fetchStaffMembers();
     } catch (err) {
       console.warn('Error syncing admin live data:', err);
+    }
+  };
+
+  const fetchStaffMembers = async () => {
+    try {
+      const res = await fetch('/api/staff-users');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.staff)) {
+        setStaffList(data.staff);
+      }
+    } catch (err) {
+      console.warn('Error fetching staff members:', err);
+    }
+  };
+
+  const openCreateStaffModal = () => {
+    setEditingStaff(null);
+    setFormStaffName('');
+    setFormStaffEmail('');
+    setFormStaffRole('operador');
+    setFormStaffDept('Taller de Impresión 3D');
+    setFormStaffActive(true);
+    setStaffModalOpen(true);
+  };
+
+  const openEditStaffModal = (staff: StaffMember) => {
+    setEditingStaff(staff);
+    setFormStaffName(staff.name);
+    setFormStaffEmail(staff.email);
+    setFormStaffRole(staff.role);
+    setFormStaffDept(staff.department || 'Taller 3D');
+    setFormStaffActive(staff.active);
+    setStaffModalOpen(true);
+  };
+
+  const handleSaveStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formStaffEmail.trim() || !formStaffName.trim()) {
+      showToast('⚠️ Por favor completa el nombre y el correo.');
+      return;
+    }
+
+    try {
+      if (editingStaff) {
+        const res = await fetch('/api/staff-users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingStaff.id,
+            email: formStaffEmail.trim().toLowerCase(),
+            name: formStaffName.trim(),
+            role: formStaffRole,
+            department: formStaffDept.trim(),
+            active: formStaffActive,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ Permisos de ${formStaffName} actualizados`);
+          fetchStaffMembers();
+          setStaffModalOpen(false);
+        } else {
+          showToast(`❌ ${data.error || 'Error al guardar'}`);
+        }
+      } else {
+        const res = await fetch('/api/staff-users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formStaffName.trim(),
+            email: formStaffEmail.trim().toLowerCase(),
+            role: formStaffRole,
+            department: formStaffDept.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🎉 Empleado ${formStaffName} autorizado exitosamente`);
+          fetchStaffMembers();
+          setStaffModalOpen(false);
+        } else {
+          showToast(`❌ ${data.error || 'Error al autorizar'}`);
+        }
+      }
+    } catch (err) {
+      showToast('❌ Error de conexión al guardar empleado');
+    }
+  };
+
+  const handleToggleStaffStatus = async (staff: StaffMember) => {
+    try {
+      const updatedStatus = !staff.active;
+      const res = await fetch('/api/staff-users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: staff.id, email: staff.email, active: updatedStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(updatedStatus ? `🟢 Acceso habilitado para ${staff.name}` : `⛔ Acceso suspendido para ${staff.name}`);
+        fetchStaffMembers();
+      }
+    } catch (err) {
+      showToast('❌ Error al actualizar estado del empleado');
+    }
+  };
+
+  const handleDeleteStaff = async (staff: StaffMember) => {
+    if (confirm(`¿Estás seguro de que deseas revocar y eliminar el acceso de "${staff.name}" (${staff.email})?`)) {
+      try {
+        const res = await fetch(`/api/staff-users?id=${encodeURIComponent(staff.id)}&email=${encodeURIComponent(staff.email)}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🗑️ Acceso revocado para ${staff.name}`);
+          fetchStaffMembers();
+        }
+      } catch (err) {
+        showToast('❌ Error al revocar acceso');
+      }
     }
   };
 
@@ -483,6 +618,13 @@ function AdminContent() {
         >
           🏷️ Catálogo & Existencias ({products.length})
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('staff')}
+          className={`${styles.mainNavTab} ${activeTab === 'staff' ? styles.mainNavTabActive : ''}`}
+        >
+          👥 Personal & Accesos ({staffList.length})
+        </button>
       </div>
 
       {/* ========================================================= */}
@@ -796,6 +938,223 @@ function AdminContent() {
       )}
 
       {/* ========================================================= */}
+      {/* TAB 3: STAFF & ACCESS CONTROL */}
+      {/* ========================================================= */}
+      {activeTab === 'staff' && (
+        <div>
+          {/* SECURITY BANNER */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              color: '#ffffff',
+              padding: '24px 28px',
+              borderRadius: '20px',
+              marginBottom: '28px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px',
+              boxShadow: '0 10px 25px rgba(15, 23, 42, 0.15)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ background: '#0071e3', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Seguridad aImprimir3D
+                </span>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Control de Acceso de Empleados</span>
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '4px 0' }}>
+                Autorización de Personal y Operadores
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', maxWidth: '650px', margin: 0 }}>
+                Solo los correos registrados y activos en este listado tienen autorización para solicitar y validar PINs de acceso para operar la plataforma administrativa.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={openCreateStaffModal}
+              className="btn btn-primary"
+              style={{ padding: '12px 22px', fontSize: '0.92rem', background: '#0071e3', border: 'none', borderRadius: '12px', fontWeight: 600 }}
+            >
+              ➕ Autorizar Nuevo Empleado
+            </button>
+          </div>
+
+          {/* KPI STATS */}
+          <div className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>Personal Autorizado</span>
+              <span className={styles.statValue}>{staffList.length}</span>
+            </div>
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>Administradores</span>
+              <span className={styles.statValue} style={{ color: '#0071e3' }}>
+                {staffList.filter((s) => s.role === 'admin').length}
+              </span>
+            </div>
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>Supervisores / Operadores</span>
+              <span className={styles.statValue} style={{ color: '#16a34a' }}>
+                {staffList.filter((s) => s.role !== 'admin').length}
+              </span>
+            </div>
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>Accesos Activos</span>
+              <span className={styles.statValue} style={{ color: '#0f172a' }}>
+                {staffList.filter((s) => s.active).length} / {staffList.length}
+              </span>
+            </div>
+          </div>
+
+          {/* CONTROLS */}
+          <div className={styles.controlsBar}>
+            <input
+              type="text"
+              placeholder="Buscar por nombre, correo o departamento..."
+              value={staffSearch}
+              onChange={(e) => setStaffSearch(e.target.value)}
+              className={styles.searchInput}
+              style={{ maxWidth: '400px' }}
+            />
+          </div>
+
+          {/* STAFF TABLE */}
+          <div className={styles.tableCard}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.th}>Empleado / Usuario</th>
+                  <th className={styles.th}>Correo Autorizado</th>
+                  <th className={styles.th}>Rol Asignado</th>
+                  <th className={styles.th}>Área / Departamento</th>
+                  <th className={styles.th}>Estado</th>
+                  <th className={styles.th}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffList
+                  .filter(
+                    (s) =>
+                      s.name.toLowerCase().includes(staffSearch.toLowerCase()) ||
+                      s.email.toLowerCase().includes(staffSearch.toLowerCase()) ||
+                      (s.department && s.department.toLowerCase().includes(staffSearch.toLowerCase()))
+                  )
+                  .map((s) => (
+                    <tr key={s.id || s.email} className={styles.tr}>
+                      <td className={styles.td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              background: s.active ? '#eff6ff' : '#f1f5f9',
+                              color: s.active ? '#0071e3' : '#64748b',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.9rem',
+                            }}
+                          >
+                            {s.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <strong>{s.name}</strong>
+                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                              Registrado: {new Date(s.createdAt).toLocaleDateString('es-DO')}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.84rem' }}>
+                          {s.email}
+                        </code>
+                      </td>
+                      <td className={styles.td}>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            background:
+                              s.role === 'admin'
+                                ? '#dbeafe'
+                                : s.role === 'supervisor'
+                                ? '#fef3c7'
+                                : '#f1f5f9',
+                            color:
+                              s.role === 'admin'
+                                ? '#1d4ed8'
+                                : s.role === 'supervisor'
+                                ? '#b45309'
+                                : '#475569',
+                          }}
+                        >
+                          {s.role === 'admin' ? '👑 Admin' : s.role === 'supervisor' ? '⭐ Supervisor' : '🛠️ Operador'}
+                        </span>
+                      </td>
+                      <td className={styles.td} style={{ fontSize: '0.85rem', color: '#475569' }}>
+                        {s.department || 'Taller de Impresión 3D'}
+                      </td>
+                      <td className={styles.td}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStaffStatus(s)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: s.active ? '#dcfce7' : '#fee2e2',
+                            color: s.active ? '#15803d' : '#b91c1c',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          title={s.active ? 'Clic para suspender acceso' : 'Clic para habilitar acceso'}
+                        >
+                          {s.active ? '🟢 Activo' : '⛔ Suspendido'}
+                        </button>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => openEditStaffModal(s)}
+                            className="btn btn-outline-dark"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStaff(s)}
+                            className="btn btn-outline-dark"
+                            style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
+                            title="Revocar acceso"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
       {/* MODAL: ORDER DETAILS & SHIPPING */}
       {/* ========================================================= */}
       {selectedOrder && (
@@ -1091,6 +1450,119 @@ function AdminContent() {
                 <button
                   type="button"
                   onClick={() => setProductModalOpen(false)}
+                  className="btn btn-outline-dark"
+                  style={{ padding: '12px 18px' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: ADD / EDIT STAFF MEMBER */}
+      {/* ========================================================= */}
+      {staffModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setStaffModalOpen(false)}>
+          <div className={styles.modalBox} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>
+                {editingStaff ? '✏️ Modificar Permisos de Empleado' : '➕ Autorizar Nuevo Empleado'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setStaffModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStaff} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Nombre Completo del Empleado</label>
+                <input
+                  type="text"
+                  value={formStaffName}
+                  onChange={(e) => setFormStaffName(e.target.value)}
+                  placeholder="Ej. Juan Pérez"
+                  className={styles.input}
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Correo Electrónico Autorizado</label>
+                <input
+                  type="email"
+                  value={formStaffEmail}
+                  onChange={(e) => setFormStaffEmail(e.target.value)}
+                  placeholder="juan@aimprimir3d.com o juan@gmail.com"
+                  className={styles.input}
+                  required
+                />
+                <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  El empleado usará este correo para recibir su PIN de 6 dígitos de inicio de sesión.
+                </span>
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Rol y Nivel de Acceso</label>
+                <select
+                  value={formStaffRole}
+                  onChange={(e) => setFormStaffRole(e.target.value as any)}
+                  className={styles.select}
+                >
+                  <option value="operador">🛠️ Operador (Visualización y Cambio de Estados de Fabricación)</option>
+                  <option value="supervisor">⭐ Supervisor (Control de Stock, Pedidos y Despachos)</option>
+                  <option value="admin">👑 Administrador (Acceso Total: Catálogo, Pedidos y Gestión de Usuarios)</option>
+                </select>
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Área o Departamento</label>
+                <input
+                  type="text"
+                  value={formStaffDept}
+                  onChange={(e) => setFormStaffDept(e.target.value)}
+                  placeholder="Ej. Granja 3D, Logística y Envíos, Soporte"
+                  className={styles.input}
+                />
+              </div>
+
+              <div className={styles.formGroupFull}>
+                <label className={styles.label}>Estado del Acceso</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="staffActive"
+                      checked={formStaffActive}
+                      onChange={() => setFormStaffActive(true)}
+                    />
+                    🟢 <strong>Acceso Activo</strong> (Puede ingresar con verificación PIN)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="staffActive"
+                      checked={!formStaffActive}
+                      onChange={() => setFormStaffActive(false)}
+                    />
+                    ⛔ <strong>Suspendido</strong> (Acceso temporalmente revocado)
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }}>
+                  💾 {editingStaff ? 'Actualizar Permisos' : 'Autorizar Empleado'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffModalOpen(false)}
                   className="btn btn-outline-dark"
                   style={{ padding: '12px 18px' }}
                 >
