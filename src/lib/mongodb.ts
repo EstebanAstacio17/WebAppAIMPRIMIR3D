@@ -1,11 +1,13 @@
 import { MongoClient, Db } from 'mongodb';
 
 function getUri(): string {
-  return process.env.MONGODB_URI || '';
+  const raw = process.env.MONGODB_URI || '';
+  return raw.trim().replace(/^["']|["']$/g, '').trim();
 }
 
 function getDbName(): string {
-  return process.env.MONGODB_DB || 'aimprimir3d';
+  const raw = process.env.MONGODB_DB || 'aimprimir3d';
+  return raw.trim().replace(/^["']|["']$/g, '').trim() || 'aimprimir3d';
 }
 
 let client: MongoClient | null = null;
