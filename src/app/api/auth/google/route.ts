@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { OAuth2Client } from 'google-auth-library';
 import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
+import { signAppJWT } from '@/lib/jwt';
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '';
 const client = new OAuth2Client(googleClientId);
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verificación criptográfica obligatoria con la librería oficial de Google
+    // 1. Verificación criptográfica obligatoria con la librería oficial de Google
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: googleClientId,
@@ -46,14 +47,15 @@ export async function POST(request: Request) {
     }
 
     const cleanEmail = payload.email.toLowerCase().trim();
+    const googleSubId = payload.sub;
 
-    // 1. Determinar si el correo pertenece al Personal / Administradores de aImprimir3D
+    // 2. Determinar si el correo pertenece al Personal / Administradores de aImprimir3D
     let isStaff =
       ADMIN_EMAILS.includes(cleanEmail) ||
       cleanEmail.endsWith('@aimprimir3d.com') ||
       cleanEmail.endsWith('@aimprimir3d.com.do');
 
-    let staffRole = 'admin';
+    let staffRole: 'admin' | 'supervisor' | 'operador' | 'client' = isStaff ? 'admin' : 'client';
     let staffName = payload.name || cleanEmail.split('@')[0];
 
     if (isMongoDBConfigured()) {
@@ -67,13 +69,19 @@ export async function POST(request: Request) {
 
           if (staffDoc) {
             isStaff = true;
-            staffRole = staffDoc.role || 'admin';
+            staffRole = (staffDoc.role as any) || 'admin';
             if (staffDoc.name) staffName = staffDoc.name;
 
-            // Actualizar último inicio de sesión del empleado
+            // Actualizar último inicio de sesión del empleado y google_id
             await db.collection('staff_users').updateOne(
               { email: cleanEmail },
-              { $set: { lastLogin: new Date().toISOString(), picture: payload.picture || '' } }
+              {
+                $set: {
+                  google_id: googleSubId,
+                  lastLogin: new Date().toISOString(),
+                  picture: payload.picture || '',
+                },
+              }
             );
           }
         }
@@ -82,19 +90,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Construir objeto de usuario autenticado
+    // 3. Construir objeto de usuario autenticado
     const userData = {
-      id: payload.sub,
+      id: googleSubId,
+      google_id: googleSubId,
       name: staffName,
       email: cleanEmail,
       picture: payload.picture || '',
       emailVerified: payload.email_verified || false,
       provider: 'google',
-      role: isStaff ? staffRole : 'client',
+      role: staffRole,
       loggedInAt: new Date().toISOString(),
     };
 
-    // 3. Si es cliente, registrar o actualizar su ficha en el CRM de clientes
+    // 4. Si es cliente, registrar o actualizar su ficha en el CRM de clientes
     if (!isStaff && isMongoDBConfigured()) {
       try {
         const db = await getDatabase();
@@ -103,6 +112,7 @@ export async function POST(request: Request) {
             { email: cleanEmail },
             {
               $set: {
+                google_id: googleSubId,
                 name: userData.name,
                 email: cleanEmail,
                 picture: userData.picture,
@@ -125,19 +135,39 @@ export async function POST(request: Request) {
       }
     }
 
+    // 5. Emisión de Sesión Propia: Servidor genera JWT criptográfico firmado
+    const serverJwt = await signAppJWT({
+      id: googleSubId,
+      google_id: googleSubId,
+      email: cleanEmail,
+      name: userData.name,
+      role: staffRole,
+      picture: userData.picture,
+    });
+
     const redirectUrl = isStaff ? '/admin' : '/dashboard';
 
     const response = NextResponse.json({
       success: true,
+      jwt: serverJwt,
       user: userData,
       isAdmin: isStaff,
+      role: staffRole,
       redirectUrl,
       message: isStaff
         ? `🔓 Acceso concedido al panel de administración (${userData.name}).`
         : `Bienvenido a aImprimir3D, ${userData.name}.`,
     });
 
-    // 4. Guardar cookies de sesión
+    // 6. Guardar cookies de sesión seguras (HttpOnly JWT + JSON readable para UI)
+    response.cookies.set('auth_token', serverJwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
     response.cookies.set('auth_session', JSON.stringify(userData), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',

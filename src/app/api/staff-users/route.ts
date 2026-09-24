@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
 import { StaffMember } from '@/types/product';
+import { requireStaffOrAdmin } from '@/lib/jwt';
 
 const DEFAULT_STAFF: StaffMember[] = [
   {
@@ -44,8 +45,11 @@ const DEFAULT_STAFF: StaffMember[] = [
 // Almacén en memoria de respaldo
 let localStaffStore: StaffMember[] = [...DEFAULT_STAFF];
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     if (isMongoDBConfigured()) {
       const db = await getDatabase();
       if (db) {
@@ -78,6 +82,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { user, errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     const body = await request.json();
     const { name, email, role, department } = body;
 
@@ -113,7 +120,11 @@ export async function POST(request: Request) {
     localStaffStore = localStaffStore.filter((s) => s.email !== cleanEmail);
     localStaffStore.unshift(newStaff);
 
-    return NextResponse.json({ success: true, staffMember: newStaff, message: 'Empleado autorizado agregado exitosamente.' });
+    return NextResponse.json({
+      success: true,
+      staffMember: newStaff,
+      message: `Empleado autorizado agregado exitosamente por ${user?.name}.`,
+    });
   } catch (error: any) {
     console.error('Error adding staff member:', error);
     return NextResponse.json({ error: error.message || 'Error al agregar empleado.' }, { status: 500 });
@@ -122,6 +133,9 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const { user, errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     const body = await request.json();
     const { id, email, name, role, department, active } = body;
 
@@ -159,7 +173,7 @@ export async function PUT(request: Request) {
       return s;
     });
 
-    return NextResponse.json({ success: true, message: 'Permisos de empleado actualizados.' });
+    return NextResponse.json({ success: true, message: `Permisos de empleado actualizados por ${user?.name}.` });
   } catch (error: any) {
     console.error('Error updating staff member:', error);
     return NextResponse.json({ error: error.message || 'Error al actualizar empleado.' }, { status: 500 });
@@ -168,6 +182,9 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { user, errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const email = searchParams.get('email')?.trim().toLowerCase();
@@ -187,7 +204,7 @@ export async function DELETE(request: Request) {
 
     localStaffStore = localStaffStore.filter((s) => s.id !== id && s.email !== email);
 
-    return NextResponse.json({ success: true, message: 'Acceso de empleado revocado exitosamente.' });
+    return NextResponse.json({ success: true, message: `Acceso de empleado revocado exitosamente por ${user?.name}.` });
   } catch (error: any) {
     console.error('Error deleting staff member:', error);
     return NextResponse.json({ error: error.message || 'Error al eliminar empleado.' }, { status: 500 });

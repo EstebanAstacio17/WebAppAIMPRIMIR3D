@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
 import { Product } from '@/types/product';
 import { initialMockProducts } from '@/utils/productStorage';
+import { requireStaffOrAdmin } from '@/lib/jwt';
 
 export async function GET() {
   try {
@@ -47,6 +48,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    // 🛡️ Muro de Autorización: Exige rol Admin / Staff
+    const { user, errorResponse } = await requireStaffOrAdmin(req);
+    if (errorResponse) return errorResponse;
+
     const body = await req.json();
     const productPayload: Product = {
       id: body.id || Date.now(),
@@ -76,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       product: productPayload,
-      message: 'Producto guardado exitosamente.',
+      message: 'Producto guardado exitosamente por ' + user?.name,
     });
   } catch (error: any) {
     console.error('Error in POST /api/products:', error);
@@ -89,6 +94,10 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    // 🛡️ Muro de Autorización: Exige rol Admin / Staff
+    const { user, errorResponse } = await requireStaffOrAdmin(req);
+    if (errorResponse) return errorResponse;
+
     const body = await req.json();
     const productId = body.id;
 
@@ -119,7 +128,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Producto actualizado en MongoDB Atlas.',
+      message: 'Producto actualizado en MongoDB Atlas por ' + user?.name,
     });
   } catch (error: any) {
     console.error('Error in PUT /api/products:', error);
@@ -132,6 +141,10 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    // 🛡️ Muro de Autorización: Exige rol Admin / Staff
+    const { user, errorResponse } = await requireStaffOrAdmin(req);
+    if (errorResponse) return errorResponse;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -154,7 +167,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Producto eliminado correctamente.',
+      message: 'Producto eliminado correctamente por ' + user?.name,
     });
   } catch (error: any) {
     console.error('Error in DELETE /api/products:', error);

@@ -2,17 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase, isMongoDBConfigured, getLastMongoError } from '@/lib/mongodb';
 import { Order } from '@/types/product';
 import { initialMockOrders } from '@/utils/orderStorage';
+import { getAuthUserFromRequest } from '@/lib/jwt';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const emailParam = searchParams.get('email');
+    const requestedEmail = searchParams.get('email');
+
+    // 🛡️ Obtener identidad criptográficamente validada desde el servidor
+    const authUser = await getAuthUserFromRequest(req);
+    const isStaff = authUser && ['admin', 'supervisor', 'operador'].includes(authUser.role);
+
+    // Si es un cliente regular autenticado, AISLAMIENTO ESTRICTO: solo puede ver sus propios pedidos
+    let effectiveEmailFilter: string | null = null;
+    if (authUser && !isStaff) {
+      effectiveEmailFilter = authUser.email.toLowerCase().trim();
+    } else if (isStaff) {
+      effectiveEmailFilter = requestedEmail ? requestedEmail.toLowerCase().trim() : null;
+    } else if (requestedEmail) {
+      effectiveEmailFilter = requestedEmail.toLowerCase().trim();
+    }
 
     if (!isMongoDBConfigured()) {
       let result = initialMockOrders;
-      if (emailParam) {
-        const clean = emailParam.toLowerCase().trim();
-        result = result.filter(o => o.email && o.email.toLowerCase().trim() === clean);
+      if (effectiveEmailFilter) {
+        result = result.filter(o => o.email && o.email.toLowerCase().trim() === effectiveEmailFilter);
       }
       return NextResponse.json({
         success: true,
@@ -25,9 +39,8 @@ export async function GET(req: NextRequest) {
     const db = await getDatabase();
     if (!db) {
       let result = initialMockOrders;
-      if (emailParam) {
-        const clean = emailParam.toLowerCase().trim();
-        result = result.filter(o => o.email && o.email.toLowerCase().trim() === clean);
+      if (effectiveEmailFilter) {
+        result = result.filter(o => o.email && o.email.toLowerCase().trim() === effectiveEmailFilter);
       }
       return NextResponse.json({
         success: true,
@@ -49,12 +62,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    let orders = await collection.find({}).sort({ _id: -1 }).toArray();
-
-    if (emailParam) {
-      const cleanEmail = emailParam.toLowerCase().trim();
-      orders = orders.filter(o => o.email && o.email.toLowerCase().trim() === cleanEmail);
+    let query: any = {};
+    if (effectiveEmailFilter) {
+      query = {
+        $or: [
+          { email: effectiveEmailFilter },
+          { 'customer.email': effectiveEmailFilter },
+        ],
+      };
     }
+
+    const orders = await collection.find(query).sort({ _id: -1 }).toArray();
 
     return NextResponse.json({
       success: true,
@@ -81,16 +99,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Vincular con usuario autenticado si existe sesión
+    const authUser = await getAuthUserFromRequest(req);
+    const userId = authUser ? authUser.id : null;
+    const userEmail = authUser ? authUser.email : orderPayload.email;
+
     if (isMongoDBConfigured()) {
       const db = await getDatabase();
       if (db) {
-        // 1. Upsert order into orders collection
+        // 1. Upsert order into orders collection con aislamiento
         const ordersCol = db.collection('orders');
         await ordersCol.updateOne(
           { id: orderPayload.id },
           {
             $set: {
               ...orderPayload,
+              userId: userId || orderPayload.userId,
+              email: (userEmail || orderPayload.email || '').toLowerCase().trim(),
               createdAt: orderPayload.date || new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },
@@ -122,6 +147,26 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+
+        // 3. Si el cliente está registrado, acumular en su ficha de cliente
+        if (userEmail) {
+          try {
+            await db.collection('customers').updateOne(
+              { email: userEmail.toLowerCase().trim() },
+              {
+                $inc: {
+                  totalOrders: 1,
+                  totalSpent: Number(orderPayload.total) || 0,
+                },
+                $set: {
+                  lastOrderDate: new Date().toISOString(),
+                },
+              }
+            );
+          } catch (cErr) {
+            console.warn('Error actualizando métricas de cliente:', cErr);
+          }
+        }
       }
     }
 
@@ -151,11 +196,37 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // 🛡️ Muro de Autorización
+    const authUser = await getAuthUserFromRequest(req);
+    const isStaff = authUser && ['admin', 'supervisor', 'operador'].includes(authUser.role);
+
     if (isMongoDBConfigured()) {
       const db = await getDatabase();
       if (db) {
         const ordersCol = db.collection<Order>('orders');
         const existingOrder = await ordersCol.findOne({ id: orderId });
+
+        if (!existingOrder) {
+          return NextResponse.json({ success: false, error: 'Pedido no encontrado' }, { status: 404 });
+        }
+
+        // Si no es staff, verificar que sea el dueño del pedido
+        if (!isStaff) {
+          const isOwner =
+            authUser &&
+            existingOrder.email &&
+            authUser.email.toLowerCase().trim() === existingOrder.email.toLowerCase().trim();
+
+          if (!isOwner) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Acceso denegado (403 Forbidden): No tienes autorización para modificar este pedido.',
+              },
+              { status: 403 }
+            );
+          }
+        }
 
         const updateFields: any = {
           updatedAt: new Date().toISOString(),

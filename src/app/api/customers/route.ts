@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
 import { CustomerUser } from '@/types/product';
+import { requireStaffOrAdmin } from '@/lib/jwt';
 
 const INITIAL_MOCK_CUSTOMERS: CustomerUser[] = [
   {
@@ -33,8 +34,11 @@ const INITIAL_MOCK_CUSTOMERS: CustomerUser[] = [
 
 let localCustomers: CustomerUser[] = [...INITIAL_MOCK_CUSTOMERS];
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     if (isMongoDBConfigured()) {
       const db = await getDatabase();
       if (db) {
@@ -119,6 +123,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { user, errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     const body = await request.json();
     const { name, email, phone, address, notes, status } = body;
 
@@ -157,7 +164,11 @@ export async function POST(request: Request) {
     localCustomers = localCustomers.filter((c) => c.email !== cleanEmail);
     localCustomers.unshift(newCustomer);
 
-    return NextResponse.json({ success: true, customer: newCustomer, message: 'Cliente registrado exitosamente.' });
+    return NextResponse.json({
+      success: true,
+      customer: newCustomer,
+      message: `Cliente registrado exitosamente por ${user?.name}.`,
+    });
   } catch (error: any) {
     console.error('Error creating customer:', error);
     return NextResponse.json({ error: error.message || 'Error al registrar cliente.' }, { status: 500 });
@@ -166,6 +177,9 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const { user, errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     const body = await request.json();
     const { id, email, name, phone, address, status, notes } = body;
 
@@ -199,7 +213,7 @@ export async function PUT(request: Request) {
       return c;
     });
 
-    return NextResponse.json({ success: true, message: 'Información del cliente actualizada.' });
+    return NextResponse.json({ success: true, message: `Información del cliente actualizada por ${user?.name}.` });
   } catch (error: any) {
     console.error('Error updating customer:', error);
     return NextResponse.json({ error: error.message || 'Error al actualizar cliente.' }, { status: 500 });
@@ -208,6 +222,9 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { user, errorResponse } = await requireStaffOrAdmin(request);
+    if (errorResponse) return errorResponse;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const email = searchParams.get('email')?.trim().toLowerCase();
@@ -227,7 +244,7 @@ export async function DELETE(request: Request) {
 
     localCustomers = localCustomers.filter((c) => c.id !== id && c.email !== email);
 
-    return NextResponse.json({ success: true, message: 'Registro del cliente eliminado.' });
+    return NextResponse.json({ success: true, message: `Registro del cliente eliminado por ${user?.name}.` });
   } catch (error: any) {
     console.error('Error deleting customer:', error);
     return NextResponse.json({ error: error.message || 'Error al eliminar cliente.' }, { status: 500 });

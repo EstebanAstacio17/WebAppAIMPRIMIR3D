@@ -35,6 +35,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  userId?: string;
   customer: string;
   email: string;
   phone?: string;
@@ -45,13 +46,16 @@ export interface Order {
   status: 'pending' | 'payment_confirmed' | 'in_production' | 'completed' | 'cancelled';
   date: string;
   trackingNumber?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AppUser {
   id?: string;
+  google_id?: string;
   name: string;
   email: string;
-  role: 'admin' | 'client';
+  role: 'admin' | 'supervisor' | 'operador' | 'client';
   provider?: string;
   picture?: string;
   loggedInAt: string;
