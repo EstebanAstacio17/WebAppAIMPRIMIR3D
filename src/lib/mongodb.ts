@@ -1,7 +1,12 @@
 import { MongoClient, Db } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || '';
-const dbName = process.env.MONGODB_DB || 'aimprimir3d';
+function getUri(): string {
+  return process.env.MONGODB_URI || '';
+}
+
+function getDbName(): string {
+  return process.env.MONGODB_DB || 'aimprimir3d';
+}
 
 let client: MongoClient | null = null;
 let clientPromise: Promise<MongoClient> | null = null;
@@ -12,11 +17,13 @@ declare global {
 }
 
 export function isMongoDBConfigured(): boolean {
+  const uri = getUri();
   return Boolean(uri && uri.startsWith('mongodb'));
 }
 
 export async function getMongoClient(): Promise<MongoClient | null> {
-  if (!isMongoDBConfigured()) {
+  const uri = getUri();
+  if (!uri || !uri.startsWith('mongodb')) {
     return null;
   }
 
@@ -42,5 +49,5 @@ export async function getMongoClient(): Promise<MongoClient | null> {
 export async function getDatabase(): Promise<Db | null> {
   const client = await getMongoClient();
   if (!client) return null;
-  return client.db(dbName);
+  return client.db(getDbName());
 }
