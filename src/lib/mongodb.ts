@@ -1,7 +1,7 @@
 import { MongoClient, Db } from 'mongodb';
 
 const DEFAULT_ATLAS_URI =
-  'mongodb+srv://portaforza_db_user:uSF25ipWXsKQ3DAy@cluster0.2vqqcae.mongodb.net/aimprimir3d?retryWrites=true&w=majority&appName=Cluster0';
+  'mongodb://portaforza_db_user:uSF25ipWXsKQ3DAy@ac-wuiwq2p-shard-00-00.2vqqcae.mongodb.net:27017,ac-wuiwq2p-shard-00-01.2vqqcae.mongodb.net:27017,ac-wuiwq2p-shard-00-02.2vqqcae.mongodb.net:27017/aimprimir3d?ssl=true&replicaSet=atlas-jselsr-shard-0&authSource=admin&retryWrites=true&w=majority';
 
 function getUri(): string {
   const raw = process.env.MONGODB_URI || DEFAULT_ATLAS_URI;
