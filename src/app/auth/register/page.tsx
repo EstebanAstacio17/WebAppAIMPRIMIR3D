@@ -1,113 +1,54 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import styles from '../auth.module.css';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const cleanEmail = email.toLowerCase().trim();
-    const isAdmin = cleanEmail.includes('@aimprimir3d');
-
-    const userObj = {
-      name: name.trim(),
-      email: cleanEmail,
-      role: isAdmin ? 'admin' : 'client',
-      provider: 'credentials',
-      loggedInAt: new Date().toISOString(),
-    };
-
-    try {
-      localStorage.setItem('aimprimir3d_user', JSON.stringify(userObj));
-    } catch (err) {
-      console.error(err);
-    }
-
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/dashboard');
-    }, 500);
-  };
-
   return (
     <div className={styles.authContainer}>
       <div className={`${styles.authCard} animate-fade-in`}>
-        <Link href="/">
+        <Link href="/" style={{ display: 'inline-block', marginBottom: '12px' }}>
           <Image src="/img/logonombre.png" alt="Logo" width={180} height={44} className={styles.logo} priority />
         </Link>
         <h1 className={styles.authTitle}>Crear Cuenta</h1>
-        <p className={styles.authSubtitle}>Únete para cotizar y dar seguimiento en vivo a tus pedidos</p>
+        <p className={styles.authSubtitle}>
+          Regístrate de forma segura con tu cuenta verificada de Google para cotizar y rastrear tus pedidos en vivo.
+        </p>
 
         {/* GOOGLE IDENTITY SERVICES BOTÓN NATIVO */}
-        <div className={styles.googleSection}>
+        <div style={{ margin: '28px 0 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <GoogleAuthButton text="signup_with" redirectTo="/dashboard" />
         </div>
 
-        <div className={styles.divider}>
-          <span>o con tu correo</span>
+        {/* SECURITY HIGHLIGHTS */}
+        <div
+          style={{
+            background: '#f8fafc',
+            borderRadius: '16px',
+            padding: '18px 20px',
+            border: '1px solid #e2e8f0',
+            textAlign: 'left',
+            marginTop: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.84rem', color: '#334155' }}>
+            <span style={{ fontSize: '1.1rem' }}>🛡️</span>
+            <span><strong>Cuentas Verificadas:</strong> Solo se admiten correos legítimos y verificados por Google.</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.84rem', color: '#334155' }}>
+            <span style={{ fontSize: '1.1rem' }}>⚡</span>
+            <span><strong>Sin Contraseñas:</strong> Acceso instantáneo y seguro sin riesgo de contraseñas olvidadas.</span>
+          </div>
         </div>
 
-        <form onSubmit={handleRegister}>
-          <div className={styles.formGroup}>
-            <label htmlFor="name" className={styles.label}>Nombre Completo</label>
-            <input
-              type="text"
-              id="name"
-              className={styles.input}
-              placeholder="Juan Pérez"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="email" className={styles.label}>Correo Electrónico</label>
-            <input
-              type="email"
-              id="email"
-              className={styles.input}
-              placeholder="tu@correo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="password" className={styles.label}>Contraseña</label>
-            <input
-              type="password"
-              id="password"
-              className={styles.input}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className={`btn btn-primary ${styles.submitBtn}`}
-          >
-            {loading ? 'Creando cuenta...' : 'Registrarme y Rastrear Pedidos'}
-          </button>
-        </form>
-
-        <div className={styles.authLinks}>
-          ¿Ya tienes una cuenta? 
+        <div className={styles.authLinks} style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+          ¿Ya tienes una cuenta?{' '}
           <Link href="/auth/login" className={styles.authLink}>
             Inicia sesión aquí
           </Link>

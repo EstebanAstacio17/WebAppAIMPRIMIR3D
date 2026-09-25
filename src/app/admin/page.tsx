@@ -429,27 +429,6 @@ function AdminContent() {
     };
   }, [editIdParam]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminPassword === 'aimprimir2026' || adminPassword === 'admin3d' || adminPassword === '1234') {
-      sessionStorage.setItem('aimprimir3d_admin_auth', 'true');
-      localStorage.setItem('aimprimir3d_staff_session', 'true');
-      localStorage.setItem('aimprimir3d_user', JSON.stringify({
-        name: 'Staff aImprimir3D',
-        email: 'admin@aimprimir3d.com',
-        role: 'admin',
-        provider: 'staff_gate',
-        loggedInAt: new Date().toISOString(),
-      }));
-      setIsAdminLoggedIn(true);
-      setAdminError(null);
-      showToast('🔓 Acceso concedido al panel de aImprimir3D');
-      window.dispatchEvent(new Event('aimprimir3d_auth_changed'));
-    } else {
-      setAdminError('Contraseña o PIN incorrecto.');
-    }
-  };
-
   const handleAdminLogout = () => {
     logoutUser();
     setIsAdminLoggedIn(false);

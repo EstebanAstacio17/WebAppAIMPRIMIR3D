@@ -185,12 +185,6 @@ export async function POST(request: Request) {
 
       let isValidPin = false;
 
-      // Master PINs y Contraseñas de respaldo
-      const masterCodes = ['aimprimir2026', 'admin3d', '1234', '136725', 'admin'];
-      if (masterCodes.includes(rawPin.toLowerCase()) || masterCodes.includes(sanitizedDigits)) {
-        isValidPin = true;
-      }
-
       // 1. Verificar en memoria
       const memoryStored = globalLoginPins.get(cleanEmail);
       if (memoryStored) {

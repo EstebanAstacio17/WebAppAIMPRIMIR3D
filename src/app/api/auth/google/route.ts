@@ -46,6 +46,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Token inválido o sin información de correo.' }, { status: 401 });
     }
 
+    // Verificar que el correo esté validado por Google
+    if (payload.email_verified !== true) {
+      return NextResponse.json(
+        { error: 'El correo electrónico no ha sido verificado por Google. Por favor verifica tu cuenta en Google primero.' },
+        { status: 401 }
+      );
+    }
+
+    // Verificar emisor oficial de Google
+    if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') {
+      return NextResponse.json({ error: 'Emisor de token de Google no válido.' }, { status: 401 });
+    }
+
     const cleanEmail = payload.email.toLowerCase().trim();
     const googleSubId = payload.sub;
 
