@@ -100,16 +100,20 @@ export default function LoginPage() {
           Inicia sesión de forma segura con tu cuenta de Google o con un código enviado a tu correo.
         </p>
 
-        {/* GOOGLE SIGN-IN BUTTON */}
-        <div style={{ margin: '20px 0 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-          <GoogleAuthButton text="continue_with" redirectTo="/dashboard" />
-        </div>
+        {/* GOOGLE SIGN-IN BUTTON (WHEN CLIENT ID CONFIGURED) */}
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          <>
+            <div style={{ margin: '14px 0 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+              <GoogleAuthButton text="continue_with" redirectTo="/dashboard" />
+            </div>
 
-        <div className={styles.divider} style={{ margin: '18px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ height: '1px', flex: 1, background: '#e2e8f0' }}></span>
-          <span style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600 }}>o verificación por correo</span>
-          <span style={{ height: '1px', flex: 1, background: '#e2e8f0' }}></span>
-        </div>
+            <div className={styles.divider} style={{ margin: '18px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ height: '1px', flex: 1, background: '#e2e8f0' }}></span>
+              <span style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600 }}>o con tu correo</span>
+              <span style={{ height: '1px', flex: 1, background: '#e2e8f0' }}></span>
+            </div>
+          </>
+        )}
 
         {errorMsg && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', padding: '10px 14px', borderRadius: '10px', fontSize: '0.84rem', marginBottom: '16px', textAlign: 'center' }}>

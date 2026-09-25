@@ -152,12 +152,7 @@ export default function GoogleAuthButton({
 
       {clientId ? (
         <div ref={buttonRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />
-      ) : (
-        <div style={{ width: '100%', maxWidth: '360px', padding: '16px', borderRadius: '12px', background: '#fef3c7', border: '1px solid #fde047', color: '#854d0e', fontSize: '0.84rem', textAlign: 'center' }}>
-          <div style={{ fontWeight: 700, marginBottom: '4px' }}>🔒 Google OAuth no configurado</div>
-          <div>Por favor agrega <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> en las variables de entorno para habilitar el acceso seguro con Google.</div>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
