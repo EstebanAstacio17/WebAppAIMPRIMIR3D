@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { getDatabase, isMongoDBConfigured } from '@/lib/mongodb';
 import { AppUser } from '@/types/product';
+import { signAppJWT } from '@/lib/jwt';
 
 const ADMIN_EMAILS = [
   'info.aimprimir3d@gmail.com',
@@ -247,17 +248,34 @@ export async function POST(request: Request) {
         loggedInAt: new Date().toISOString(),
       };
 
+      const serverJwt = await signAppJWT({
+        id: `usr-${Date.now()}`,
+        email: cleanEmail,
+        name: userPayload.name,
+        role: adminInfo.isAdmin ? 'admin' : 'client',
+      });
+
       const redirectUrl = adminInfo.isAdmin ? '/admin' : '/dashboard';
 
       const response = NextResponse.json({
         success: true,
+        jwt: serverJwt,
         user: userPayload,
         isAdmin: adminInfo.isAdmin,
         redirectUrl,
         message: adminInfo.isAdmin ? '🔓 Acceso administrativo concedido.' : 'Bienvenido a aImprimir3D.',
       });
 
-      // Cookie de sesión de usuario
+      // Cookie segura HttpOnly con JWT firmado
+      response.cookies.set('auth_token', serverJwt, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+
+      // Cookie de sesión de usuario legible
       response.cookies.set('auth_session', JSON.stringify(userPayload), {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
