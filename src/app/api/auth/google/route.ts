@@ -70,11 +70,13 @@ export async function POST(request: Request) {
 
     let staffRole: 'admin' | 'supervisor' | 'operador' | 'client' = isStaff ? 'admin' : 'client';
     let staffName = payload.name || cleanEmail.split('@')[0];
+    let isAuthorized = isStaff;
 
     if (isMongoDBConfigured()) {
       try {
         const db = await getDatabase();
         if (db) {
+          // 2.1 Verificar si es Personal / Staff
           const staffDoc = await db.collection('staff_users').findOne({
             email: cleanEmail,
             active: { $ne: false },
@@ -82,6 +84,7 @@ export async function POST(request: Request) {
 
           if (staffDoc) {
             isStaff = true;
+            isAuthorized = true;
             staffRole = (staffDoc.role as any) || 'admin';
             if (staffDoc.name) staffName = staffDoc.name;
 
@@ -98,6 +101,7 @@ export async function POST(request: Request) {
             );
           } else if (isStaff) {
             // Es Super Admin por whitelist (ej. portaforza@gmail.com): asegurar en staff_users
+            isAuthorized = true;
             await db.collection('staff_users').updateOne(
               { email: cleanEmail },
               {
@@ -121,11 +125,63 @@ export async function POST(request: Request) {
 
             // Eliminar de customers para que no aparezca duplicado como cliente
             await db.collection('customers').deleteOne({ email: cleanEmail });
+          } else {
+            // 2.2 Verificar si es Cliente Autorizado Previamente (en customers u orders)
+            const [customerDoc, existingOrder] = await Promise.all([
+              db.collection('customers').findOne({
+                email: cleanEmail,
+                status: { $ne: 'disabled' },
+              }),
+              db.collection('orders').findOne({
+                $or: [{ email: cleanEmail }, { 'customer.email': cleanEmail }],
+              }),
+            ]);
+
+            if (customerDoc || existingOrder) {
+              isAuthorized = true;
+              if (customerDoc?.name) staffName = customerDoc.name;
+
+              // Actualizar ficha del cliente existente
+              await db.collection('customers').updateOne(
+                { email: cleanEmail },
+                {
+                  $set: {
+                    google_id: googleSubId,
+                    picture: payload.picture || '',
+                    provider: 'google',
+                    lastActive: new Date().toISOString(),
+                  },
+                }
+              );
+            }
           }
         }
       } catch (dbErr) {
-        console.warn('Error verificando staff en DB:', dbErr);
+        console.warn('Error verificando autorización en DB:', dbErr);
       }
+    } else {
+      // Modo sin DB: permitir únicamente correos conocidos o whitelist
+      const ALLOWED_DEMO_EMAILS = [
+        ...ADMIN_EMAILS,
+        'cliente.demo@gmail.com',
+        'cliente@prueba.do',
+        'juan@correo.com',
+        'maria@correo.com',
+        'carlos@empresa.do',
+      ];
+      if (ALLOWED_DEMO_EMAILS.includes(cleanEmail)) {
+        isAuthorized = true;
+      }
+    }
+
+    // ⛔ SI NO ESTÁ AUTORIZADO NI REGISTRADO EN EL SISTEMA, RECHAZAR EL ACCESO
+    if (!isAuthorized) {
+      return NextResponse.json(
+        {
+          error: `Acceso denegado: El correo (${cleanEmail}) no está registrado ni autorizado en el sistema de aImprimir3D. Por favor contacta al administrador para habilitar tu cuenta.`,
+        },
+        { status: 403 }
+      );
     }
 
     // 3. Construir objeto de usuario autenticado
@@ -140,38 +196,6 @@ export async function POST(request: Request) {
       role: staffRole,
       loggedInAt: new Date().toISOString(),
     };
-
-    // 4. Si es cliente, registrar o actualizar su ficha en el CRM de clientes
-    if (!isStaff && isMongoDBConfigured()) {
-      try {
-        const db = await getDatabase();
-        if (db) {
-          await db.collection('customers').updateOne(
-            { email: cleanEmail },
-            {
-              $set: {
-                google_id: googleSubId,
-                name: userData.name,
-                email: cleanEmail,
-                picture: userData.picture,
-                provider: 'google',
-                lastActive: new Date().toISOString(),
-              },
-              $setOnInsert: {
-                id: `cust-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                status: 'active',
-                createdAt: new Date().toISOString(),
-                totalOrders: 0,
-                totalSpent: 0,
-              },
-            },
-            { upsert: true }
-          );
-        }
-      } catch (custErr) {
-        console.warn('Error registrando cliente en DB:', custErr);
-      }
-    }
 
     // 5. Emisión de Sesión Propia: Servidor genera JWT criptográfico firmado
     const serverJwt = await signAppJWT({
