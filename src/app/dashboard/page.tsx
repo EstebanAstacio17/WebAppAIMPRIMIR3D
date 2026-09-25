@@ -22,15 +22,16 @@ export default function DashboardPage() {
     setCurrentUser(user);
 
     const updateViewWithOrders = (ordersList: Order[]) => {
-      setAllOrders(ordersList);
       if (user && user.email) {
         const clientEmail = user.email.toLowerCase().trim();
         const userOrders = ordersList.filter(
           (o) =>
             o.email && o.email.toLowerCase().trim() === clientEmail
         );
+        setAllOrders(userOrders);
         setFilteredOrders(userOrders);
       } else {
+        setAllOrders([]);
         setFilteredOrders([]);
       }
     };
@@ -63,12 +64,12 @@ export default function DashboardPage() {
         syncOrdersFromApi(user.email)
           .then((liveOrders) => {
             if (liveOrders && Array.isArray(liveOrders)) {
-              setAllOrders(liveOrders);
               const clientEmail = user.email.toLowerCase().trim();
               const userOrders = liveOrders.filter(
                 (o) =>
                   o.email && o.email.toLowerCase().trim() === clientEmail
               );
+              setAllOrders(userOrders);
               setFilteredOrders(userOrders);
             }
           })
