@@ -21,6 +21,12 @@ export async function GET(req: NextRequest) {
       effectiveEmailFilter = requestedEmail ? requestedEmail.toLowerCase().trim() : null;
     } else if (requestedEmail) {
       effectiveEmailFilter = requestedEmail.toLowerCase().trim();
+    } else {
+      // Petición no autenticada y sin filtro de correo: no exponer datos de otros clientes
+      return NextResponse.json({
+        success: true,
+        orders: [],
+      });
     }
 
     if (!isMongoDBConfigured()) {

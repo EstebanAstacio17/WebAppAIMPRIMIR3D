@@ -88,15 +88,10 @@ function AdminContent() {
   const refreshAdminData = async () => {
     // 1. Check if logged in user is admin
     const user = getCurrentUser();
-    if (isUserAdmin(user)) {
+    if (user && isUserAdmin(user)) {
       setIsAdminLoggedIn(true);
     } else {
-      const auth = typeof window !== 'undefined' ? sessionStorage.getItem('aimprimir3d_admin_auth') : null;
-      if (auth === 'true') {
-        setIsAdminLoggedIn(true);
-      } else {
-        setIsAdminLoggedIn(false);
-      }
+      setIsAdminLoggedIn(false);
     }
 
     // 2. Load cached immediately

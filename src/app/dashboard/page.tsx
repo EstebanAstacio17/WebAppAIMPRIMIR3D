@@ -27,12 +27,11 @@ export default function DashboardPage() {
         const clientEmail = user.email.toLowerCase().trim();
         const userOrders = ordersList.filter(
           (o) =>
-            (o.email && o.email.toLowerCase().trim() === clientEmail) ||
-            (user.name && o.customer && o.customer.toLowerCase().includes(user.name.toLowerCase()))
+            o.email && o.email.toLowerCase().trim() === clientEmail
         );
-        setFilteredOrders(userOrders.length > 0 ? userOrders : ordersList);
+        setFilteredOrders(userOrders);
       } else {
-        setFilteredOrders(ordersList);
+        setFilteredOrders([]);
       }
     };
 
@@ -42,9 +41,11 @@ export default function DashboardPage() {
 
     // 2. Live sync from MongoDB Atlas
     try {
-      const liveOrders = await syncOrdersFromApi(user?.email);
-      if (liveOrders && Array.isArray(liveOrders)) {
-        updateViewWithOrders(liveOrders);
+      if (user?.email) {
+        const liveOrders = await syncOrdersFromApi(user.email);
+        if (liveOrders && Array.isArray(liveOrders)) {
+          updateViewWithOrders(liveOrders);
+        }
       }
     } catch (e) {
       console.warn('Error fetching live client orders:', e);
@@ -58,24 +59,21 @@ export default function DashboardPage() {
     // Polling every 5 seconds for status changes made by Admin
     const pollInterval = setInterval(() => {
       const user = getCurrentUser();
-      syncOrdersFromApi(user?.email)
-        .then((liveOrders) => {
-          if (liveOrders && Array.isArray(liveOrders)) {
-            setAllOrders(liveOrders);
-            if (user && user.email) {
+      if (user?.email) {
+        syncOrdersFromApi(user.email)
+          .then((liveOrders) => {
+            if (liveOrders && Array.isArray(liveOrders)) {
+              setAllOrders(liveOrders);
               const clientEmail = user.email.toLowerCase().trim();
               const userOrders = liveOrders.filter(
                 (o) =>
-                  (o.email && o.email.toLowerCase().trim() === clientEmail) ||
-                  (user.name && o.customer && o.customer.toLowerCase().includes(user.name.toLowerCase()))
+                  o.email && o.email.toLowerCase().trim() === clientEmail
               );
-              setFilteredOrders(userOrders.length > 0 ? userOrders : liveOrders);
-            } else {
-              setFilteredOrders(liveOrders);
+              setFilteredOrders(userOrders);
             }
-          }
-        })
-        .catch(() => {});
+          })
+          .catch(() => {});
+      }
     }, 5000);
 
     const handleOrdersUpdated = () => {

@@ -44,49 +44,33 @@ export const initialMockOrders: Order[] = [
 const STORAGE_ORDERS_KEY = 'aimprimir3d_orders';
 
 export function getStoredOrders(): Order[] {
-  if (typeof window === 'undefined') return initialMockOrders;
+  if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_ORDERS_KEY);
-    if (!data) {
-      localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(initialMockOrders));
-      return initialMockOrders;
-    }
+    if (!data) return [];
     const parsed = JSON.parse(data);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialMockOrders;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.error('Error cargando pedidos:', err);
-    return initialMockOrders;
+    return [];
   }
 }
 
 export async function syncOrdersFromApi(email?: string): Promise<Order[]> {
-  if (typeof window === 'undefined') return initialMockOrders;
+  if (typeof window === 'undefined') return [];
   try {
     const url = email ? `/api/orders?email=${encodeURIComponent(email)}` : '/api/orders';
     const res = await fetch(url, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
-        if (!email) {
-          // If fetching all orders (Admin), store the master list
-          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
-        } else {
-          // Merge client orders into local store
-          const current = getStoredOrders();
-          const mergedMap = new Map<string, Order>();
-          data.orders.forEach((o: Order) => mergedMap.set(o.id, o));
-          current.forEach((o: Order) => {
-            if (!mergedMap.has(o.id)) mergedMap.set(o.id, o);
-          });
-          const mergedList = Array.from(mergedMap.values());
-          localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(mergedList));
-        }
+        localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(data.orders));
         window.dispatchEvent(new Event('aimprimir3d_orders_updated'));
         return data.orders;
       }
     }
   } catch (e) {
-    console.warn('Fallback a pedidos locales:', e);
+    console.warn('Error sincronizando pedidos:', e);
   }
   return getStoredOrders();
 }

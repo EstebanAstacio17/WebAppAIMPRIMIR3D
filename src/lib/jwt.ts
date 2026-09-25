@@ -79,25 +79,6 @@ export async function getAuthUserFromRequest(
       const verified = await verifyAppJWT(tokenFromCookie);
       if (verified) return verified;
     }
-
-    // Fallback de compatibilidad con sesión JSON en caso de transición
-    if (cookies['aimprimir3d_staff_session'] || cookies['auth_session']) {
-      try {
-        const rawJson = cookies['aimprimir3d_staff_session'] || cookies['auth_session'];
-        const parsed = JSON.parse(rawJson);
-        if (parsed && parsed.email) {
-          return {
-            id: parsed.id || parsed.sub || parsed.email,
-            email: parsed.email.toLowerCase().trim(),
-            name: parsed.name || '',
-            role: parsed.role || (cookies['aimprimir3d_staff_session'] ? 'admin' : 'client'),
-            picture: parsed.picture,
-          };
-        }
-      } catch (e) {
-        // Ignorar si no es JSON válido
-      }
-    }
   }
 
   return null;
